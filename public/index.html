@@ -12,7 +12,7 @@
 		const app = Elm.Main.init();
 
 		app.ports.connect.subscribe(function (name) {
-			const socket = io(`http://localhost:3000?userName=${name}`);
+			const socket = io(`${window.location.host}?userName=${name}`);
 
 			socket.on('connect', () => app.ports.connected.send(null));
 
