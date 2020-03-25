@@ -1,7 +1,7 @@
 port module Main exposing (main)
 
 import Browser exposing (Document, document)
-import Html exposing (button, div, form, input, label, text)
+import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
@@ -24,29 +24,47 @@ type Msg
     | UserJoined String
 
 
-type alias Model =
-    { nameInputText : String
-    , currentName : String
+type Model
+    = Login LoginData
+    | Connected ConnectedData
+
+
+type alias LoginData =
+    String
+
+
+type alias ConnectedData =
+    { userName : String
     , message : String
     }
 
 
 initModel : () -> ( Model, Cmd Msg )
 initModel _ =
-    ( { nameInputText = "", currentName = "", message = "" }, Cmd.none )
+    ( Login "", Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        UpdateName str ->
-            ( { model | nameInputText = str }, Cmd.none )
+    case model of
+        Login currentUserName ->
+            case msg of
+                UpdateName newUserName ->
+                    ( Login newUserName, Cmd.none )
 
-        SubmitName ->
-            ( { model | currentName = model.nameInputText, nameInputText = "" }, connect model.nameInputText )
+                SubmitName ->
+                    ( Connected { userName = currentUserName, message = "" }, connect currentUserName )
 
-        UserJoined userName ->
-            ( { model | message = userName ++ " joined" }, Cmd.none )
+                _ ->
+                    ( model, Cmd.none )
+
+        Connected connectedData ->
+            case msg of
+                UserJoined userName ->
+                    ( Connected { connectedData | message = userName ++ " joined" }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -58,17 +76,32 @@ view : Model -> Document Msg
 view model =
     { title = "Envolve"
     , body =
-        [ div []
-            [ form [ onSubmit SubmitName ]
-                [ label [ for "name-input" ] [ text "Please enter your name: " ]
-                , input [ onInput UpdateName, id "name-input", value model.nameInputText ] []
-                , button [ type_ "submit" ] [ text "Enter" ]
-                , text model.currentName
-                ]
-            , div [] [ text model.message ]
-            ]
-        ]
+        case model of
+            Login currentUserName ->
+                [ viewLogin currentUserName ]
+
+            Connected data ->
+                [ viewConnected data ]
     }
+
+
+viewLogin : LoginData -> Html Msg
+viewLogin currentUserName =
+    form [ onSubmit SubmitName ]
+        [ label [ for "name-input" ] [ text "Please enter your name: " ]
+        , input [ onInput UpdateName, id "name-input", value currentUserName ] []
+        , button [ type_ "submit" ] [ text "Enter" ]
+        ]
+
+
+viewConnected : ConnectedData -> Html Msg
+viewConnected data =
+    div []
+        [ div []
+            [ text ("Hello " ++ data.userName) ]
+        , div []
+            [ text data.message ]
+        ]
 
 
 onSubmit : Msg -> Html.Attribute Msg
