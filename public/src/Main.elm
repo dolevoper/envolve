@@ -1,11 +1,10 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser exposing (Document, document)
-import Html exposing (Html, div, text)
+import Html as Html
 import Login as Login
+import Home as Home
 
-
-port userJoined : (String -> msg) -> Sub msg
 
 
 main : Program () Model Msg
@@ -15,18 +14,12 @@ main =
 
 type Msg
     = LoginMsg Login.Msg
-    | UserJoined String
+    | HomeMsg Home.Msg
 
 
 type Model
     = Login Login.Model
-    | Home ConnectedData
-
-
-type alias ConnectedData =
-    { userName : String
-    , message : String
-    }
+    | Home Home.Model
 
 
 initModel : () -> ( Model, Cmd Msg )
@@ -49,8 +42,11 @@ update msg model =
             in
                 ( Login newLogin, Cmd.map LoginMsg loginCmd )
 
-        ( UserJoined userName, Home data ) ->
-            ( Home { data | message = userName ++ " joined" }, Cmd.none )
+        ( HomeMsg homeMsg, Home home ) ->
+            let
+                ( newHome, homeCmd ) = Home.update homeMsg home
+            in
+                ( Home newHome, Cmd.map HomeMsg homeCmd )
 
         ( _, _ ) ->
             ( model, Cmd.none )
@@ -62,8 +58,8 @@ subscriptions model =
         Login login ->
             Sub.map LoginMsg (Login.subscriptions login)
 
-        Home _ ->
-            userJoined UserJoined
+        Home home ->
+            Sub.map HomeMsg (Home.subscriptions home)
 
 
 view : Model -> Document Msg
@@ -76,15 +72,7 @@ view model =
                 { title = title, body = List.map (Html.map LoginMsg) body}
 
         Home home ->
-            { title = "Envolve - Home"
-            , body = [ viewConnected home ]}
-
-
-viewConnected : ConnectedData -> Html Msg
-viewConnected data =
-    div []
-        [ div []
-            [ text ("Hello " ++ data.userName) ]
-        , div []
-            [ text data.message ]
-        ]
+            let
+                { title, body } = Home.view home
+            in
+                { title = title, body = List.map (Html.map HomeMsg) body}
