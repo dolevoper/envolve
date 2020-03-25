@@ -12,13 +12,11 @@
 		const app = Elm.Main.init();
 
 		app.ports.connect.subscribe(function (name) {
-			setTimeout(function () {
-				const socket = io(`http://localhost:3000?userName=${name}`);
+			const socket = io(`http://localhost:3000?userName=${name}`);
 
-				socket.on('connect', () => app.ports.connected.send(null));
+			socket.on('connect', () => app.ports.connected.send(null));
 
-				socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
-			}, 1000);
+			socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
 		});
 	</script>
 </body>

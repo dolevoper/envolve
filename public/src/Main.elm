@@ -57,7 +57,7 @@ update msg model =
             ( Login (Pending currentUserName), connect currentUserName )
 
         ( Connected, Login (Pending currentUserName) ) ->
-            ( Home { userName = currentUserName, message = "" }, connect currentUserName )
+            ( Home { userName = currentUserName, message = "" }, Cmd.none )
 
         ( UserJoined userName, Home data ) ->
             ( Home { data | message = userName ++ " joined" }, Cmd.none )
