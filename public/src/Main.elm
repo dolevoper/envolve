@@ -1,16 +1,8 @@
 port module Main exposing (main)
 
 import Browser exposing (Document, document)
-import Html exposing (Html, button, div, form, input, label, text)
-import Html.Attributes exposing (for, id, type_, value, disabled)
-import Html.Events exposing (onInput, preventDefaultOn)
-import Json.Decode as Json
-
-
-port connect : String -> Cmd msg
-
-
-port connected : (() -> msg) -> Sub msg
+import Html exposing (Html, div, text)
+import Login as Login
 
 
 port userJoined : (String -> msg) -> Sub msg
@@ -22,18 +14,13 @@ main =
 
 
 type Msg
-    = UpdateName String
-    | SubmitName
-    | Connected
+    = LoginMsg Login.Msg
     | UserJoined String
 
 
 type Model
-    = Login LoginData
+    = Login Login.Model
     | Home ConnectedData
-
-
-type LoginData = Input String | Pending String
 
 
 type alias ConnectedData =
@@ -43,21 +30,24 @@ type alias ConnectedData =
 
 
 initModel : () -> ( Model, Cmd Msg )
-initModel _ =
-    ( Login (Input ""), Cmd.none )
+initModel flags =
+    let
+        ( loginModel, loginCmd ) = Login.init flags
+    in
+        ( Login loginModel, Cmd.map LoginMsg loginCmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( UpdateName newUserName, Login (Input _) ) ->
-            ( Login (Input newUserName), Cmd.none )
+        ( LoginMsg Login.Connected, Login (Login.PendingConnection userName) ) ->
+            ( Home { userName = userName, message = "" }, Cmd.none )
 
-        ( SubmitName, Login (Input currentUserName) ) ->
-            ( Login (Pending currentUserName), connect currentUserName )
-
-        ( Connected, Login (Pending currentUserName) ) ->
-            ( Home { userName = currentUserName, message = "" }, Cmd.none )
+        ( LoginMsg loginMsg, Login login ) ->
+            let
+                ( newLogin, loginCmd ) = Login.update loginMsg login
+            in
+                ( Login newLogin, Cmd.map LoginMsg loginCmd )
 
         ( UserJoined userName, Home data ) ->
             ( Home { data | message = userName ++ " joined" }, Cmd.none )
@@ -69,8 +59,8 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Login _ ->
-            connected (always Connected)
+        Login login ->
+            Sub.map LoginMsg (Login.subscriptions login)
 
         Home _ ->
             userJoined UserJoined
@@ -78,33 +68,16 @@ subscriptions model =
 
 view : Model -> Document Msg
 view model =
-    { title = "Envolve"
-    , body =
-        case model of
-            Login data ->
-                [ viewLogin data ]
+    case model of
+        Login login ->
+            let
+                { title, body } = Login.view login
+            in
+                { title = title, body = List.map (Html.map LoginMsg) body}
 
-            Home data ->
-                [ viewConnected data ]
-    }
-
-
-viewLogin : LoginData -> Html Msg
-viewLogin data =
-    case data of
-        Input currentUserName ->
-            form [ onSubmit SubmitName ]
-                [ label [ for "name-input" ] [ text "Please enter your name: " ]
-                , input [ onInput UpdateName, id "name-input", value currentUserName ] []
-                , button [ type_ "submit" ] [ text "Enter" ]
-                ]
-
-        Pending currentUserName ->
-            div []
-                [ label [ for "name-input" ] [ text "Please enter your name: " ]
-                , input [ id "name-input", value currentUserName, disabled True ] []
-                , button [ disabled True ] [ text "Enter" ]
-                ]
+        Home home ->
+            { title = "Envolve - Home"
+            , body = [ viewConnected home ]}
 
 
 viewConnected : ConnectedData -> Html Msg
@@ -115,8 +88,3 @@ viewConnected data =
         , div []
             [ text data.message ]
         ]
-
-
-onSubmit : Msg -> Html.Attribute Msg
-onSubmit msg =
-    preventDefaultOn "submit" (Json.succeed ( msg, True ))
