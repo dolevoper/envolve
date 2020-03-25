@@ -9,7 +9,7 @@ import Home as Home
 
 main : Program () Model Msg
 main =
-    document { view = view, subscriptions = subscriptions, update = update, init = initModel }
+    document { view = view, subscriptions = subscriptions, update = update, init = init }
 
 
 type Msg
@@ -22,34 +22,47 @@ type Model
     | Home Home.Model
 
 
-initModel : () -> ( Model, Cmd Msg )
-initModel flags =
+init : () -> ( Model, Cmd Msg )
+init flags =
+    initPage Login.init Login LoginMsg flags
+
+
+initPage : (pageFlags -> ( pageModel, Cmd pageMsg )) -> (pageModel -> Model) -> (pageMsg -> Msg) -> pageFlags -> ( Model, Cmd Msg )
+initPage initiator fromPageModel fromPageMsg flags =
     let
-        ( loginModel, loginCmd ) = Login.init flags
+        ( pageModel, pageCmd ) = initiator flags
     in
-        ( Login loginModel, Cmd.map LoginMsg loginCmd )
+        ( fromPageModel pageModel, Cmd.map fromPageMsg pageCmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        updateLoginPage = updatePage Login.update LoginMsg Login
+        updateHomePage = updatePage Home.update HomeMsg Home
+        initHomePage = initPage Home.init Home HomeMsg
+    in
+    
     case ( msg, model ) of
         ( LoginMsg Login.Connected, Login (Login.PendingConnection userName) ) ->
-            ( Home { userName = userName, message = "" }, Cmd.none )
+            initHomePage userName
 
         ( LoginMsg loginMsg, Login login ) ->
-            let
-                ( newLogin, loginCmd ) = Login.update loginMsg login
-            in
-                ( Login newLogin, Cmd.map LoginMsg loginCmd )
+            updateLoginPage loginMsg login
 
         ( HomeMsg homeMsg, Home home ) ->
-            let
-                ( newHome, homeCmd ) = Home.update homeMsg home
-            in
-                ( Home newHome, Cmd.map HomeMsg homeCmd )
+            updateHomePage homeMsg home
 
         ( _, _ ) ->
             ( model, Cmd.none )
+
+
+updatePage : (pageMsg -> pageModel -> ( pageModel, Cmd pageMsg )) -> (pageMsg -> Msg) -> (pageModel -> Model) -> pageMsg -> pageModel -> ( Model, Cmd Msg )
+updatePage updater fromPageMsg fromPageModel msg model =
+    let
+        ( newModel, pageCmd ) = updater msg model
+    in
+        ( fromPageModel newModel, Cmd.map fromPageMsg pageCmd )
 
 
 subscriptions : Model -> Sub Msg
@@ -64,15 +77,21 @@ subscriptions model =
 
 view : Model -> Document Msg
 view model =
-    case model of
-        Login login ->
-            let
-                { title, body } = Login.view login
-            in
-                { title = title, body = List.map (Html.map LoginMsg) body}
+    let
+        viewLoginPage = viewPage Login.view LoginMsg
+        viewHomePage = viewPage Home.view HomeMsg
+    in
+        case model of
+            Login login ->
+                viewLoginPage login
 
-        Home home ->
-            let
-                { title, body } = Home.view home
-            in
-                { title = title, body = List.map (Html.map HomeMsg) body}
+            Home home ->
+                viewHomePage home
+
+
+viewPage : (pageModel -> Document pageMsg) -> (pageMsg -> Msg) -> pageModel -> Document Msg
+viewPage viewer fromPageMsg model =
+    let
+        { title, body } = viewer model
+    in
+        { title = title, body = List.map (Html.map fromPageMsg) body}
