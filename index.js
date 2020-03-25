@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = socket(server);
 const port = process.env.PORT || 3000;
 
-const rooms = [];
+let rooms = [];
 
 app.use(express.static(`${__dirname}/public`));
 
@@ -29,7 +29,7 @@ io.on('connection', function (socket) {
     if (!roomId) {
         roomId = socket.handshake.query.roomId || uuid().substr(-8);
 
-        rooms.push(roomId);
+        rooms = [...rooms, roomId];
     }
 
     console.log(`${userName} joined room ${roomId}`);
@@ -39,6 +39,16 @@ io.on('connection', function (socket) {
 
     socket.on('disconnect', function () {
         console.log(`${userName} disconnected`);
+
+        io.in(roomId).clients(function (error, clients) {
+            if (error) throw error;
+
+            if (!clients.length) {
+                console.log(`closed room ${roomId}`);
+                
+                rooms = rooms.filter(id => id !== roomId);
+            }
+        });
     });
 });
 
