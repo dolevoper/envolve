@@ -9,15 +9,28 @@ const server = http.createServer(app);
 const io = socket(server);
 const port = process.env.PORT || 3000;
 
+const rooms = [];
+
 app.use(express.static(`${__dirname}/public`));
 
-app.get('*', function (_, res) {
+app.get('/:roomId', function (req, res) {
+    const { roomId } = req.params;
+
+    if (!rooms.includes(roomId)) {
+        return res.send(`Room ${roomId} does not exists.`);
+    }
+
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
 
 io.on('connection', function (socket) {
-    const userName = socket.handshake.query.userName;
-    const roomId = socket.handshake.query.roomId || uuid().substr(-8);
+    let { userName, roomId } = socket.handshake.query;
+
+    if (!roomId) {
+        roomId = socket.handshake.query.roomId || uuid().substr(-8);
+
+        rooms.push(roomId);
+    }
 
     console.log(`${userName} joined room ${roomId}`);
 
