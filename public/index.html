@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Envolve</title>
+</head>
+<body>
+	<script src="socket.io/socket.io.js"></script>
+	<script src="main.js"></script>
+	<script>
+		let socket;
+		const app = Elm.Main.init();
+
+		app.ports.connect.subscribe(function (name) {
+			console.log(`hello ${name}`);
+			socket = io(`http://localhost:3000?userName=${name}`);
+
+			socket.on('new user', function ({ userName }) {
+				console.log(`${userName} joined`);
+
+				app.ports.userJoined.send(userName);
+			});
+		});
+	</script>
+</body>
+</html>
