@@ -5163,36 +5163,42 @@ var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$connect = _Platform_outgoingPort('connect', $elm$json$Json$Encode$string);
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		if (!model.$) {
-			var currentUserName = model.a;
-			switch (msg.$) {
-				case 0:
-					var newUserName = msg.a;
-					return _Utils_Tuple2(
-						$author$project$Main$Login(newUserName),
-						$elm$core$Platform$Cmd$none);
-				case 1:
+		var _v0 = _Utils_Tuple2(msg, model);
+		_v0$3:
+		while (true) {
+			if (!_v0.b.$) {
+				switch (_v0.a.$) {
+					case 0:
+						var newUserName = _v0.a.a;
+						return _Utils_Tuple2(
+							$author$project$Main$Login(newUserName),
+							$elm$core$Platform$Cmd$none);
+					case 1:
+						var _v1 = _v0.a;
+						var currentUserName = _v0.b.a;
+						return _Utils_Tuple2(
+							$author$project$Main$Connected(
+								{E: '', L: currentUserName}),
+							$author$project$Main$connect(currentUserName));
+					default:
+						break _v0$3;
+				}
+			} else {
+				if (_v0.a.$ === 2) {
+					var userName = _v0.a.a;
+					var data = _v0.b.a;
 					return _Utils_Tuple2(
 						$author$project$Main$Connected(
-							{E: '', L: currentUserName}),
-						$author$project$Main$connect(currentUserName));
-				default:
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			}
-		} else {
-			var connectedData = model.a;
-			if (msg.$ === 2) {
-				var userName = msg.a;
-				return _Utils_Tuple2(
-					$author$project$Main$Connected(
-						_Utils_update(
-							connectedData,
-							{E: userName + ' joined'})),
-					$elm$core$Platform$Cmd$none);
-			} else {
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							_Utils_update(
+								data,
+								{E: userName + ' joined'})),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					break _v0$3;
+				}
 			}
 		}
+		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;

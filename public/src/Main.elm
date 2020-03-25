@@ -46,25 +46,18 @@ initModel _ =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case model of
-        Login currentUserName ->
-            case msg of
-                UpdateName newUserName ->
-                    ( Login newUserName, Cmd.none )
+    case ( msg, model ) of
+        ( UpdateName newUserName, Login _ ) ->
+            ( Login newUserName, Cmd.none )
 
-                SubmitName ->
-                    ( Connected { userName = currentUserName, message = "" }, connect currentUserName )
+        ( SubmitName, Login currentUserName ) ->
+            ( Connected { userName = currentUserName, message = "" }, connect currentUserName )
 
-                _ ->
-                    ( model, Cmd.none )
+        ( UserJoined userName, Connected data ) ->
+            ( Connected { data | message = userName ++ " joined" }, Cmd.none )
 
-        Connected connectedData ->
-            case msg of
-                UserJoined userName ->
-                    ( Connected { connectedData | message = userName ++ " joined" }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+        ( _, _ ) ->
+            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
