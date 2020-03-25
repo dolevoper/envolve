@@ -9,18 +9,16 @@
 	<script src="socket.io/socket.io.js"></script>
 	<script src="main.js"></script>
 	<script>
-		let socket;
 		const app = Elm.Main.init();
 
 		app.ports.connect.subscribe(function (name) {
-			console.log(`hello ${name}`);
-			socket = io(`http://localhost:3000?userName=${name}`);
+			setTimeout(function () {
+				const socket = io(`http://localhost:3000?userName=${name}`);
 
-			socket.on('new user', function ({ userName }) {
-				console.log(`${userName} joined`);
+				socket.on('connect', () => app.ports.connected.send(null));
 
-				app.ports.userJoined.send(userName);
-			});
+				socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
+			}, 1000);
 		});
 	</script>
 </body>

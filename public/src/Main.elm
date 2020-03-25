@@ -2,12 +2,15 @@ port module Main exposing (main)
 
 import Browser exposing (Document, document)
 import Html exposing (Html, button, div, form, input, label, text)
-import Html.Attributes exposing (for, id, type_, value)
+import Html.Attributes exposing (for, id, type_, value, disabled)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
 
 
 port connect : String -> Cmd msg
+
+
+port connected : (() -> msg) -> Sub msg
 
 
 port userJoined : (String -> msg) -> Sub msg
@@ -21,16 +24,16 @@ main =
 type Msg
     = UpdateName String
     | SubmitName
+    | Connected
     | UserJoined String
 
 
 type Model
     = Login LoginData
-    | Connected ConnectedData
+    | Home ConnectedData
 
 
-type alias LoginData =
-    String
+type LoginData = Input String | Pending String
 
 
 type alias ConnectedData =
@@ -41,28 +44,36 @@ type alias ConnectedData =
 
 initModel : () -> ( Model, Cmd Msg )
 initModel _ =
-    ( Login "", Cmd.none )
+    ( Login (Input ""), Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( UpdateName newUserName, Login _ ) ->
-            ( Login newUserName, Cmd.none )
+        ( UpdateName newUserName, Login (Input _) ) ->
+            ( Login (Input newUserName), Cmd.none )
 
-        ( SubmitName, Login currentUserName ) ->
-            ( Connected { userName = currentUserName, message = "" }, connect currentUserName )
+        ( SubmitName, Login (Input currentUserName) ) ->
+            ( Login (Pending currentUserName), connect currentUserName )
 
-        ( UserJoined userName, Connected data ) ->
-            ( Connected { data | message = userName ++ " joined" }, Cmd.none )
+        ( Connected, Login (Pending currentUserName) ) ->
+            ( Home { userName = currentUserName, message = "" }, connect currentUserName )
+
+        ( UserJoined userName, Home data ) ->
+            ( Home { data | message = userName ++ " joined" }, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    userJoined UserJoined
+subscriptions model =
+    case model of
+        Login _ ->
+            connected (always Connected)
+
+        Home _ ->
+            userJoined UserJoined
 
 
 view : Model -> Document Msg
@@ -70,21 +81,30 @@ view model =
     { title = "Envolve"
     , body =
         case model of
-            Login currentUserName ->
-                [ viewLogin currentUserName ]
+            Login data ->
+                [ viewLogin data ]
 
-            Connected data ->
+            Home data ->
                 [ viewConnected data ]
     }
 
 
 viewLogin : LoginData -> Html Msg
-viewLogin currentUserName =
-    form [ onSubmit SubmitName ]
-        [ label [ for "name-input" ] [ text "Please enter your name: " ]
-        , input [ onInput UpdateName, id "name-input", value currentUserName ] []
-        , button [ type_ "submit" ] [ text "Enter" ]
-        ]
+viewLogin data =
+    case data of
+        Input currentUserName ->
+            form [ onSubmit SubmitName ]
+                [ label [ for "name-input" ] [ text "Please enter your name: " ]
+                , input [ onInput UpdateName, id "name-input", value currentUserName ] []
+                , button [ type_ "submit" ] [ text "Enter" ]
+                ]
+
+        Pending currentUserName ->
+            div []
+                [ label [ for "name-input" ] [ text "Please enter your name: " ]
+                , input [ id "name-input", value currentUserName, disabled True ] []
+                , button [ disabled True ] [ text "Enter" ]
+                ]
 
 
 viewConnected : ConnectedData -> Html Msg

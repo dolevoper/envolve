@@ -5138,6 +5138,9 @@ var $elm$core$Task$perform = F2(
 			A2($elm$core$Task$map, toMessage, task));
 	});
 var $elm$browser$Browser$document = _Browser_document;
+var $author$project$Main$Input = function (a) {
+	return {$: 0, a: a};
+};
 var $author$project$Main$Login = function (a) {
 	return {$: 0, a: a};
 };
@@ -5145,18 +5148,36 @@ var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$initModel = function (_v0) {
 	return _Utils_Tuple2(
-		$author$project$Main$Login(''),
+		$author$project$Main$Login(
+			$author$project$Main$Input('')),
 		$elm$core$Platform$Cmd$none);
 };
+var $author$project$Main$Connected = {$: 2};
 var $author$project$Main$UserJoined = function (a) {
-	return {$: 2, a: a};
+	return {$: 3, a: a};
 };
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
+	});
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $author$project$Main$connected = _Platform_incomingPort(
+	'connected',
+	$elm$json$Json$Decode$null(0));
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $author$project$Main$userJoined = _Platform_incomingPort('userJoined', $elm$json$Json$Decode$string);
-var $author$project$Main$subscriptions = function (_v0) {
-	return $author$project$Main$userJoined($author$project$Main$UserJoined);
+var $author$project$Main$subscriptions = function (model) {
+	if (!model.$) {
+		return $author$project$Main$connected(
+			$elm$core$Basics$always($author$project$Main$Connected));
+	} else {
+		return $author$project$Main$userJoined($author$project$Main$UserJoined);
+	}
 };
-var $author$project$Main$Connected = function (a) {
+var $author$project$Main$Home = function (a) {
+	return {$: 1, a: a};
+};
+var $author$project$Main$Pending = function (a) {
 	return {$: 1, a: a};
 };
 var $elm$json$Json$Encode$string = _Json_wrap;
@@ -5164,37 +5185,51 @@ var $author$project$Main$connect = _Platform_outgoingPort('connect', $elm$json$J
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model);
-		_v0$3:
+		_v0$4:
 		while (true) {
 			if (!_v0.b.$) {
-				switch (_v0.a.$) {
-					case 0:
-						var newUserName = _v0.a.a;
+				if (!_v0.b.a.$) {
+					switch (_v0.a.$) {
+						case 0:
+							var newUserName = _v0.a.a;
+							return _Utils_Tuple2(
+								$author$project$Main$Login(
+									$author$project$Main$Input(newUserName)),
+								$elm$core$Platform$Cmd$none);
+						case 1:
+							var _v1 = _v0.a;
+							var currentUserName = _v0.b.a.a;
+							return _Utils_Tuple2(
+								$author$project$Main$Login(
+									$author$project$Main$Pending(currentUserName)),
+								$author$project$Main$connect(currentUserName));
+						default:
+							break _v0$4;
+					}
+				} else {
+					if (_v0.a.$ === 2) {
+						var _v2 = _v0.a;
+						var currentUserName = _v0.b.a.a;
 						return _Utils_Tuple2(
-							$author$project$Main$Login(newUserName),
-							$elm$core$Platform$Cmd$none);
-					case 1:
-						var _v1 = _v0.a;
-						var currentUserName = _v0.b.a;
-						return _Utils_Tuple2(
-							$author$project$Main$Connected(
+							$author$project$Main$Home(
 								{E: '', L: currentUserName}),
 							$author$project$Main$connect(currentUserName));
-					default:
-						break _v0$3;
+					} else {
+						break _v0$4;
+					}
 				}
 			} else {
-				if (_v0.a.$ === 2) {
+				if (_v0.a.$ === 3) {
 					var userName = _v0.a.a;
 					var data = _v0.b.a;
 					return _Utils_Tuple2(
-						$author$project$Main$Connected(
+						$author$project$Main$Home(
 							_Utils_update(
 								data,
 								{E: userName + ' joined'})),
 						$elm$core$Platform$Cmd$none);
 				} else {
-					break _v0$3;
+					break _v0$4;
 				}
 			}
 		}
@@ -5230,6 +5265,15 @@ var $author$project$Main$UpdateName = function (a) {
 	return {$: 0, a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -5294,54 +5338,94 @@ var $author$project$Main$onSubmit = function (msg) {
 };
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
-var $author$project$Main$viewLogin = function (currentUserName) {
-	return A2(
-		$elm$html$Html$form,
-		_List_fromArray(
-			[
-				$author$project$Main$onSubmit($author$project$Main$SubmitName)
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$label,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$for('name-input')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('Please enter your name: ')
-					])),
-				A2(
-				$elm$html$Html$input,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onInput($author$project$Main$UpdateName),
-						$elm$html$Html$Attributes$id('name-input'),
-						$elm$html$Html$Attributes$value(currentUserName)
-					]),
-				_List_Nil),
-				A2(
-				$elm$html$Html$button,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$type_('submit')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('Enter')
-					]))
-			]));
+var $author$project$Main$viewLogin = function (data) {
+	if (!data.$) {
+		var currentUserName = data.a;
+		return A2(
+			$elm$html$Html$form,
+			_List_fromArray(
+				[
+					$author$project$Main$onSubmit($author$project$Main$SubmitName)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$label,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$for('name-input')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Please enter your name: ')
+						])),
+					A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onInput($author$project$Main$UpdateName),
+							$elm$html$Html$Attributes$id('name-input'),
+							$elm$html$Html$Attributes$value(currentUserName)
+						]),
+					_List_Nil),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$type_('submit')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Enter')
+						]))
+				]));
+	} else {
+		var currentUserName = data.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$label,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$for('name-input')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Please enter your name: ')
+						])),
+					A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$id('name-input'),
+							$elm$html$Html$Attributes$value(currentUserName),
+							$elm$html$Html$Attributes$disabled(true)
+						]),
+					_List_Nil),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$disabled(true)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Enter')
+						]))
+				]));
+	}
 };
 var $author$project$Main$view = function (model) {
 	return {
 		ao: function () {
 			if (!model.$) {
-				var currentUserName = model.a;
+				var data = model.a;
 				return _List_fromArray(
 					[
-						$author$project$Main$viewLogin(currentUserName)
+						$author$project$Main$viewLogin(data)
 					]);
 			} else {
 				var data = model.a;
