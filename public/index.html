@@ -17,6 +17,8 @@
 			socket.on('connect', () => app.ports.connected.send(null));
 
 			socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
+
+			socket.on('managing', ({ roomId }) => app.ports.managing.send(`${window.location.protocol}//${window.location.host}/${roomId}`));
 		});
 	</script>
 </body>

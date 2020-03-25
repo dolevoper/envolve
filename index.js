@@ -30,6 +30,8 @@ io.on('connection', function (socket) {
         roomId = socket.handshake.query.roomId || uuid().substr(-8);
 
         rooms = [...rooms, roomId];
+
+        socket.emit('managing', { roomId });
     }
 
     console.log(`${userName} joined room ${roomId}`);
