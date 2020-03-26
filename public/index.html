@@ -14,6 +14,8 @@
 		app.ports.connect.subscribe(function (name) {
 			const socket = io(`${window.location.host}?userName=${name}&roomId=${window.location.pathname.slice(1)}`);
 
+			socket.on('disconnect', () => window.location.assign(`${window.location.protocol}//${window.location.host}`));
+
 			socket.on('connect', () => app.ports.connected.send(null));
 
 			socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));

@@ -70,15 +70,15 @@ io.on('connection', function (socket) {
     socket.on('disconnect', function () {
         console.log(`${userName} disconnected`);
 
-        io.in(roomId).clients(function (error, clients) {
-            if (error) throw error;
+        if (isAdmin) {
+            closeRoom(roomId);
 
-            if (!clients.length) {
-                console.log(`closed room ${roomId}`);
-                
-                closeRoom(roomId);
-            }
-        });
+            io.in(roomId).clients(function (error, clientIds) {
+                if (error) throw error;
+    
+                clientIds.forEach(clientId => io.sockets.sockets[clientId].disconnect(true));
+            });
+        }
     });
 
     socket.use((packet) => {
