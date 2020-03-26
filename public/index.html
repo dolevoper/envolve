@@ -22,14 +22,14 @@
 
 			socket.on('start poll', () => app.ports.pollStarting.send(null));
 
-			socket.on('cast vote', vote => console.log('vote', vote));
+			socket.on('cast vote', ({ vote }) => app.ports.recievedVote.send(vote));
 
 			app.ports.startPoll.subscribe(function () {
 				socket.emit('start poll');
 			});
 
 			app.ports.castVote.subscribe(function (vote) {
-				socket.emit('cast vote', vote);
+				socket.emit('cast vote', { vote });
 			});
 		});
 	</script>

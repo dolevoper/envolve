@@ -21,10 +21,14 @@ port pollStarting : (() -> msg) -> Sub msg
 port castVote : Bool -> Cmd msg
 
 
+port recievedVote : (Bool -> msg) -> Sub msg
+
+
 type Msg
     = UserJoined String
     | Managing String
     | StartPoll
+    | RecievedVote Bool
     | PollStarting
     | VoteClicked Bool
 
@@ -66,24 +70,37 @@ init userName =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
-        ( UserJoined userName, Admin admin ) ->
-            ( Admin { admin | message = userName ++ " joined" }, Cmd.none )
+    case model of
+        Admin admin ->
+            case ( msg, admin.poll ) of
+                ( UserJoined userName, _ ) ->
+                    ( Admin { admin | message = userName ++ " joined" }, Cmd.none )
 
-        ( StartPoll, Admin admin ) ->
-            ( Admin { admin | poll = Just (AdminPollData 0 0) }, startPoll () )
+                ( StartPoll, Nothing ) ->
+                    ( Admin { admin | poll = Just (AdminPollData 0 0) }, startPoll () )
 
-        ( Managing inviteLink, Guest guest ) ->
-            ( Admin { userName = guest.userName, message = "", inviteLink = inviteLink, poll = Nothing }, Cmd.none )
+                ( RecievedVote True, Just { yes, no } ) ->
+                    ( Admin { admin | poll = Just (AdminPollData (yes + 1) no) }, Cmd.none )
 
-        ( PollStarting, Guest guest ) ->
-            ( Guest { guest | poll = Just NotVoted }, Cmd.none )
+                ( RecievedVote False, Just { yes, no } ) ->
+                    ( Admin { admin | poll = Just (AdminPollData yes (no + 1)) }, Cmd.none )
 
-        ( VoteClicked vote, Guest guest ) ->
-            ( Guest { guest | poll = Just (Voted vote) }, castVote vote )
+                _ ->
+                    ( model, Cmd.none )
 
-        ( _, _ ) ->
-            ( model, Cmd.none )
+        Guest guest ->
+            case msg of
+                Managing inviteLink ->
+                    ( Admin { userName = guest.userName, message = "", inviteLink = inviteLink, poll = Nothing }, Cmd.none )
+
+                PollStarting ->
+                    ( Guest { guest | poll = Just NotVoted }, Cmd.none )
+
+                VoteClicked vote ->
+                    ( Guest { guest | poll = Just (Voted vote) }, castVote vote )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -92,6 +109,7 @@ subscriptions _ =
         [ userJoined UserJoined
         , managing Managing
         , pollStarting (always PollStarting)
+        , recievedVote RecievedVote
         ]
 
 
