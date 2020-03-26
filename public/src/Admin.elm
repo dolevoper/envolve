@@ -1,12 +1,15 @@
 port module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Html exposing (Html, a, button, div, text)
+import Html exposing (Html, a, button, div, text, ul, li)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
 
 
 port userJoined : (String -> msg) -> Sub msg
+
+
+port userLeft : (String -> msg) -> Sub msg
 
 
 port startPoll : () -> Cmd msg
@@ -17,6 +20,7 @@ port recievedVote : (Bool -> msg) -> Sub msg
 
 type Msg
     = UserJoined String
+    | UserLeft String
     | StartPoll
     | RecievedVote Bool
 
@@ -24,7 +28,7 @@ type Msg
 type alias Model =
     { userName : String
     , inviteLink : String
-    , message : String
+    , participants : List String
     , poll : Maybe AdminPollData
     }
 
@@ -37,14 +41,17 @@ type alias AdminPollData =
 
 init : { userName : String, inviteLink : String } -> ( Model, Cmd Msg )
 init { userName, inviteLink } =
-    ( { userName = userName, inviteLink = inviteLink, message = "", poll = Nothing }, Cmd.none )
+    ( { userName = userName, inviteLink = inviteLink, participants = [], poll = Nothing }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.poll ) of
         ( UserJoined userName, _ ) ->
-            ( { model | message = userName ++ " joined" }, Cmd.none )
+            ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
+
+        ( UserLeft userName, _ ) ->
+            ( { model | participants = List.filter ((/=) userName) model.participants }, Cmd.none )
 
         ( StartPoll, Nothing ) ->
             ( { model | poll = Just (AdminPollData 0 0) }, startPoll () )
@@ -63,6 +70,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ userJoined UserJoined
+        , userLeft UserLeft
         , recievedVote RecievedVote
         ]
 
@@ -77,11 +85,23 @@ view model =
                 [ text "Invite people to join using this link: "
                 , externalLink model.inviteLink model.inviteLink
                 ]
-            , div [] [ text model.message ]
+            , viewParticipants model.participants
             , viewAdminPollSection model.poll
             ]
         ]
     }
+
+
+viewParticipants : List String -> Html Msg
+viewParticipants participants =
+    div []
+        [ text ("Participants (" ++ String.fromInt (List.length participants) ++ "):")
+        , ul [] (List.map viewParticipant participants)
+        ]
+
+
+viewParticipant : String -> Html Msg
+viewParticipant userName = li [] [ text userName ]
 
 
 viewAdminPollSection : Maybe AdminPollData -> Html Msg

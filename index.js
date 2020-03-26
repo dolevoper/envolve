@@ -70,7 +70,9 @@ io.on('connection', function (socket) {
     socket.on('disconnect', function () {
         console.log(`${userName} disconnected`);
 
-        if (isAdmin) {
+        if (!isAdmin) {
+            io.to(adminId).emit('user left', { userName });
+        } else {
             closeRoom(roomId);
 
             io.in(roomId).clients(function (error, clientIds) {
