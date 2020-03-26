@@ -3,7 +3,8 @@ module Main exposing (main)
 import Browser exposing (Document, document)
 import Html as Html
 import Login as Login
-import Home as Home
+import Admin as Admin
+import Guest as Guest
 
 
 
@@ -14,12 +15,14 @@ main =
 
 type Msg
     = LoginMsg Login.Msg
-    | HomeMsg Home.Msg
+    | AdminMsg Admin.Msg
+    | GuestMsg Guest.Msg
 
 
 type Model
     = Login Login.Model
-    | Home Home.Model
+    | Admin Admin.Model
+    | Guest Guest.Model
 
 
 init : () -> ( Model, Cmd Msg )
@@ -39,19 +42,27 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         updateLoginPage = updatePage Login.update LoginMsg Login
-        updateHomePage = updatePage Home.update HomeMsg Home
-        initHomePage = initPage Home.init Home HomeMsg
+        updateAdminPage = updatePage Admin.update AdminMsg Admin
+        updateGuestPage = updatePage Guest.update GuestMsg Guest
+        initAdminPage = initPage Admin.init Admin AdminMsg
+        initGuestPage = initPage Guest.init Guest GuestMsg
     in
     
     case ( msg, model ) of
         ( LoginMsg Login.Connected, Login (Login.PendingConnection userName) ) ->
-            initHomePage userName
+            initGuestPage userName
+
+        ( GuestMsg (Guest.Managing inviteLink), Guest { userName } ) ->
+            initAdminPage { userName = userName, inviteLink = inviteLink }
 
         ( LoginMsg loginMsg, Login login ) ->
             updateLoginPage loginMsg login
 
-        ( HomeMsg homeMsg, Home home ) ->
-            updateHomePage homeMsg home
+        ( AdminMsg adminMsg, Admin admin ) ->
+            updateAdminPage adminMsg admin
+
+        ( GuestMsg guestMsg, Guest guest ) ->
+            updateGuestPage guestMsg guest
 
         ( _, _ ) ->
             ( model, Cmd.none )
@@ -71,22 +82,29 @@ subscriptions model =
         Login login ->
             Sub.map LoginMsg (Login.subscriptions login)
 
-        Home home ->
-            Sub.map HomeMsg (Home.subscriptions home)
+        Admin admin ->
+            Sub.map AdminMsg (Admin.subscriptions admin)
+
+        Guest guest ->
+            Sub.map GuestMsg (Guest.subscriptions guest)
 
 
 view : Model -> Document Msg
 view model =
     let
         viewLoginPage = viewPage Login.view LoginMsg
-        viewHomePage = viewPage Home.view HomeMsg
+        viewAdminPage = viewPage Admin.view AdminMsg
+        viewGuestPage = viewPage Guest.view GuestMsg
     in
         case model of
             Login login ->
                 viewLoginPage login
 
-            Home home ->
-                viewHomePage home
+            Admin admin ->
+                viewAdminPage admin
+                
+            Guest guest ->
+                viewGuestPage guest
 
 
 viewPage : (pageModel -> Document pageMsg) -> (pageMsg -> Msg) -> pageModel -> Document Msg
