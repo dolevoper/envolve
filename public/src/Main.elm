@@ -1,36 +1,43 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Admin as Admin
 import Browser exposing (Document, application)
 import Browser.Navigation as Nav
-import Url exposing (Url)
 import Guest as Guest
 import Html as Html
 import Login as Login
+import Url exposing (Protocol(..), Url)
+
+
+port disconnected : (() -> msg) -> Sub msg
 
 
 main : Program () Model Msg
-main = application
-    { view = view
-    , subscriptions = subscriptions
-    , update = update
-    , init = init
-    , onUrlChange = UrlChanged
-    , onUrlRequest = LinkClicked
-    }
+main =
+    application
+        { view = view
+        , subscriptions = subscriptions
+        , update = update
+        , init = init
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
+        }
 
 
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | Disconnected
     | LoginMsg Login.Msg
     | AdminMsg Admin.Msg
     | GuestMsg Guest.Msg
+
 
 type alias Model =
     { url : Url
     , page : Page
     }
+
 
 type Page
     = Login Login.Model
@@ -55,6 +62,20 @@ initPage initiator fromPageModel fromPageMsg flags =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
+        schema =
+            case model.url.protocol of
+                Http ->
+                    "http://"
+
+                Https ->
+                    "https://"
+
+        port_ =
+            Maybe.map (String.fromInt >> String.append ":") model.url.port_
+
+        baseUrl =
+            schema ++ model.url.host ++ Maybe.withDefault "" port_
+
         updateLoginPage =
             updatePage Login.update LoginMsg Login
 
@@ -71,6 +92,9 @@ update msg model =
             initPage Guest.init Guest GuestMsg
     in
     case ( msg, model.page ) of
+        ( Disconnected, _ ) ->
+            ( model, Nav.load baseUrl )
+
         ( LoginMsg Login.Connected, Login (Login.PendingConnection userName) ) ->
             toAppState model.url (initGuestPage userName)
 
@@ -101,15 +125,25 @@ updatePage updater fromPageMsg fromPageModel msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        disconnectedSubscription =
+            disconnected (always Disconnected)
+    in
     case model.page of
         Login login ->
             Sub.map LoginMsg (Login.subscriptions login)
 
         Admin admin ->
-            Sub.map AdminMsg (Admin.subscriptions admin)
+            Sub.batch
+                [ Sub.map AdminMsg (Admin.subscriptions admin)
+                , disconnectedSubscription
+                ]
 
         Guest guest ->
-            Sub.map GuestMsg (Guest.subscriptions guest)
+            Sub.batch
+                [ Sub.map GuestMsg (Guest.subscriptions guest)
+                , disconnectedSubscription
+                ]
 
 
 view : Model -> Document Msg
@@ -144,6 +178,6 @@ viewPage viewer fromPageMsg model =
     { title = title, body = List.map (Html.map fromPageMsg) body }
 
 
-
 toAppState : Url -> ( Page, Cmd Msg ) -> ( Model, Cmd Msg )
-toAppState url pageState = Tuple.mapFirst (Model url) pageState
+toAppState url pageState =
+    Tuple.mapFirst (Model url) pageState
