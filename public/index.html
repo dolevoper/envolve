@@ -20,7 +20,7 @@
 
 			socket.on('managing', ({ roomId }) => app.ports.managing.send(`${window.location.protocol}//${window.location.host}/${roomId}`));
 
-			socket.on('start poll', () => console.log('start poll'));
+			socket.on('start poll', () => app.ports.pollStarting.send(null));
 
 			app.ports.startPoll.subscribe(function () {
 				socket.emit('start poll');

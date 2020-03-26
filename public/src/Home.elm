@@ -1,8 +1,8 @@
 port module Home exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Html exposing (Html, div, text, a, button)
-import Html.Attributes exposing (href, target, rel)
+import Html exposing (Html, a, button, div, text)
+import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
 
 
@@ -15,10 +15,15 @@ port managing : (String -> msg) -> Sub msg
 port startPoll : () -> Cmd msg
 
 
+port pollStarting : (() -> msg) -> Sub msg
+
+
 type Msg
     = UserJoined String
     | Managing String
     | StartPoll
+    | PollStarting
+    | VoteClicked Bool
 
 
 type Model
@@ -30,18 +35,30 @@ type alias AdminState =
     { userName : String
     , inviteLink : String
     , message : String
+    , poll : Maybe AdminPollData
+    }
+
+
+type alias AdminPollData =
+    { yes : Int
+    , no : Int
     }
 
 
 type alias GuestState =
     { userName : String
-    , message : String
+    , poll : Maybe GuestPollData
     }
+
+
+type GuestPollData
+    = NotVoted
+    | Voted Bool
 
 
 init : String -> ( Model, Cmd Msg )
 init userName =
-    ( Guest { userName = userName, message = "" }, Cmd.none )
+    ( Guest { userName = userName, poll = Nothing }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -50,14 +67,17 @@ update msg model =
         ( UserJoined userName, Admin admin ) ->
             ( Admin { admin | message = userName ++ " joined" }, Cmd.none )
 
-        ( UserJoined userName, Guest guest ) ->
-            ( Guest { guest | message = userName ++ " joined" }, Cmd.none )
+        ( StartPoll, Admin admin ) ->
+            ( Admin { admin | poll = Just (AdminPollData 0 0) }, startPoll () )
 
         ( Managing inviteLink, Guest guest ) ->
-            ( Admin { userName = guest.userName, message = guest.message, inviteLink = inviteLink }, Cmd.none )
+            ( Admin { userName = guest.userName, message = "", inviteLink = inviteLink, poll = Nothing }, Cmd.none )
 
-        ( StartPoll, Admin _ ) ->
-            ( model, startPoll () )
+        ( PollStarting, Guest guest ) ->
+            ( Guest { guest | poll = Just NotVoted }, Cmd.none )
+
+        ( VoteClicked vote, Guest guest ) ->
+            ( Guest { guest | poll = Just (Voted vote) }, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )
@@ -68,6 +88,7 @@ subscriptions _ =
     Sub.batch
         [ userJoined UserJoined
         , managing Managing
+        , pollStarting (always PollStarting)
         ]
 
 
@@ -93,17 +114,43 @@ viewAdmin admin =
             , externalLink admin.inviteLink admin.inviteLink
             ]
         , div [] [ text admin.message ]
-        , div []
-            [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
+        , viewAdminPollSection admin.poll
         ]
+
+
+viewAdminPollSection : Maybe AdminPollData -> Html Msg
+viewAdminPollSection adminPollData =
+    case adminPollData of
+        Nothing ->
+            div []
+                [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
+
+        Just { yes, no } ->
+            div []
+                [ text ("Yes: " ++ String.fromInt yes ++ ", No: " ++ String.fromInt no) ]
 
 
 viewGuest : GuestState -> Html Msg
 viewGuest guest =
     div []
         [ div [] [ text ("Hello " ++ guest.userName) ]
-        , div [] [ text guest.message ]
+        , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection guest.poll)
         ]
+
+
+viewGuestPollSection : GuestPollData -> Html Msg
+viewGuestPollSection pollData =
+    case pollData of
+        NotVoted ->
+            div []
+                [ text "Please vote: "
+                , button [ onClick (VoteClicked True) ] [ text "Yes" ]
+                , button [ onClick (VoteClicked False) ] [ text "No" ]
+                ]
+
+        Voted vote ->
+            div []
+                [ text ("Your vote: " ++ if vote then "Yes" else "No") ]
 
 
 externalLink : String -> String -> Html Msg
