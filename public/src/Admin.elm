@@ -1,6 +1,7 @@
 port module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
+import Url exposing (Url, Protocol(..))
 import Html exposing (Html, a, button, div, text, ul, li)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
@@ -27,7 +28,8 @@ type Msg
 
 type alias Model =
     { userName : String
-    , inviteLink : String
+    , url : Url
+    , roomId : String
     , participants : List String
     , poll : Maybe AdminPollData
     }
@@ -39,9 +41,9 @@ type alias AdminPollData =
     }
 
 
-init : { userName : String, inviteLink : String } -> ( Model, Cmd Msg )
-init { userName, inviteLink } =
-    ( { userName = userName, inviteLink = inviteLink, participants = [], poll = Nothing }, Cmd.none )
+init : { userName : String, url : Url, roomId : String } -> ( Model, Cmd Msg )
+init { userName, url, roomId } =
+    ( { userName = userName, url = url, roomId = roomId, participants = [], poll = Nothing }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -77,19 +79,22 @@ subscriptions _ =
 
 view : Model -> Document Msg
 view model =
-    { title = "Envolve - Home"
-    , body =
-        [ div []
-            [ div [] [ text ("Hello " ++ model.userName) ]
-            , div []
-                [ text "Invite people to join using this link: "
-                , externalLink model.inviteLink model.inviteLink
+    let
+        inviteLink = buildInviteLink model.url model.roomId
+    in
+        { title = "Envolve - Home"
+        , body =
+            [ div []
+                [ div [] [ text ("Hello " ++ model.userName) ]
+                , div []
+                    [ text "Invite people to join using this link: "
+                    , externalLink inviteLink inviteLink
+                    ]
+                , viewParticipants model.participants
+                , viewAdminPollSection model.poll
                 ]
-            , viewParticipants model.participants
-            , viewAdminPollSection model.poll
             ]
-        ]
-    }
+        }
 
 
 viewParticipants : List String -> Html Msg
@@ -115,6 +120,17 @@ viewAdminPollSection adminPollData =
             div []
                 [ text ("Yes: " ++ String.fromInt yes ++ ", No: " ++ String.fromInt no) ]
 
+
+buildInviteLink : Url -> String -> String
+buildInviteLink url roomId =
+    let
+        schema =
+            case url.protocol of
+                Http -> "http://"
+                Https -> "https://"
+        port_ = Maybe.map (String.fromInt >> String.append ":") url.port_
+    in
+        schema ++ url.host ++ Maybe.withDefault "" port_ ++ "/" ++ roomId
 
 externalLink : String -> String -> Html Msg
 externalLink url displayText =

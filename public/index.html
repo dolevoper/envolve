@@ -22,7 +22,7 @@
 
 			socket.on('user left', ({ userName }) => app.ports.userLeft.send(userName));
 
-			socket.on('managing', ({ roomId }) => app.ports.managing.send(`${window.location.protocol}//${window.location.host}/${roomId}`));
+			socket.on('managing', ({ roomId }) => app.ports.managing.send(roomId));
 
 			socket.on('start poll', () => app.ports.pollStarting.send(null));
 
