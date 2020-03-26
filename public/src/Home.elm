@@ -1,8 +1,9 @@
 port module Home exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Html exposing (Html, div, text, a)
+import Html exposing (Html, div, text, a, button)
 import Html.Attributes exposing (href, target, rel)
+import Html.Events exposing (onClick)
 
 
 port userJoined : (String -> msg) -> Sub msg
@@ -11,9 +12,13 @@ port userJoined : (String -> msg) -> Sub msg
 port managing : (String -> msg) -> Sub msg
 
 
+port startPoll : () -> Cmd msg
+
+
 type Msg
     = UserJoined String
     | Managing String
+    | StartPoll
 
 
 type Model
@@ -51,6 +56,9 @@ update msg model =
         ( Managing inviteLink, Guest guest ) ->
             ( Admin { userName = guest.userName, message = guest.message, inviteLink = inviteLink }, Cmd.none )
 
+        ( StartPoll, Admin _ ) ->
+            ( model, startPoll () )
+
         ( _, _ ) ->
             ( model, Cmd.none )
 
@@ -85,6 +93,8 @@ viewAdmin admin =
             , externalLink admin.inviteLink admin.inviteLink
             ]
         , div [] [ text admin.message ]
+        , div []
+            [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
         ]
 
 

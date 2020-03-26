@@ -19,6 +19,12 @@
 			socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
 
 			socket.on('managing', ({ roomId }) => app.ports.managing.send(`${window.location.protocol}//${window.location.host}/${roomId}`));
+
+			socket.on('start poll', () => console.log('start poll'));
+
+			app.ports.startPoll.subscribe(function () {
+				socket.emit('start poll');
+			});
 		});
 	</script>
 </body>

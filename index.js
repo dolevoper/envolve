@@ -39,6 +39,10 @@ io.on('connection', function (socket) {
     socket.join(roomId);
     socket.to(roomId).emit('new user', { userName })
 
+    socket.on('start poll', function () {
+        socket.to(roomId).emit('start poll');
+    });
+
     socket.on('disconnect', function () {
         console.log(`${userName} disconnected`);
 
