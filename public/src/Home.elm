@@ -18,6 +18,9 @@ port startPoll : () -> Cmd msg
 port pollStarting : (() -> msg) -> Sub msg
 
 
+port castVote : Bool -> Cmd msg
+
+
 type Msg
     = UserJoined String
     | Managing String
@@ -77,7 +80,7 @@ update msg model =
             ( Guest { guest | poll = Just NotVoted }, Cmd.none )
 
         ( VoteClicked vote, Guest guest ) ->
-            ( Guest { guest | poll = Just (Voted vote) }, Cmd.none )
+            ( Guest { guest | poll = Just (Voted vote) }, castVote vote )
 
         ( _, _ ) ->
             ( model, Cmd.none )

@@ -9,39 +9,63 @@ const server = http.createServer(app);
 const io = socket(server);
 const port = process.env.PORT || 3000;
 
-let rooms = [];
+let roomIds = [];
+const roomsById = {};
+
+const createRoom = adminId => {
+    const roomId = uuid().substr(-8);
+
+    roomIds = [...roomIds, roomId];
+    roomsById[roomId] = { adminId };
+
+    return roomId;
+};
+
+const closeRoom = roomId => {
+    roomIds = roomIds.filter(id => id !== roomId);
+
+    delete roomsById[roomId];
+};
 
 app.use(express.static(`${__dirname}/public`));
 
 app.get('/:roomId', function (req, res) {
     const { roomId } = req.params;
 
-    if (!rooms.includes(roomId)) {
+    if (!roomIds.includes(roomId)) {
         return res.send(`Room ${roomId} does not exists.`);
     }
 
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
 
-io.on('connection', function (socket) {
-    let { userName, roomId } = socket.handshake.query;
+io.use((socket, next) => {
+    let { roomId } = socket.handshake.query;
 
     if (!roomId) {
-        roomId = socket.handshake.query.roomId || uuid().substr(-8);
-
-        rooms = [...rooms, roomId];
-
-        socket.emit('managing', { roomId });
+        roomId = createRoom(socket.id);
     }
 
-    console.log(`${userName} joined room ${roomId}`);
+    socket.roomId = roomId;
+
+    next();
+});
+
+io.on('connection', function (socket) {
+    const { userName } = socket.handshake.query;
+    const { roomId } = socket;
+    const adminId = roomsById[roomId].adminId;
+    const isAdmin = adminId === socket.id;
 
     socket.join(roomId);
-    socket.to(roomId).emit('new user', { userName })
 
-    socket.on('start poll', function () {
-        socket.to(roomId).emit('start poll');
-    });
+    if (isAdmin) {
+        socket.emit('managing', { roomId });
+        console.log(`${userName} created room ${roomId}`);
+    } else {
+        socket.to(adminId).emit('new user', { userName });
+        console.log(`${userName} joined room ${roomId}`);
+    }
 
     socket.on('disconnect', function () {
         console.log(`${userName} disconnected`);
@@ -52,9 +76,17 @@ io.on('connection', function (socket) {
             if (!clients.length) {
                 console.log(`closed room ${roomId}`);
                 
-                rooms = rooms.filter(id => id !== roomId);
+                closeRoom(roomId);
             }
         });
+    });
+
+    socket.use((packet) => {
+        if (isAdmin) {
+            socket.to(roomId).emit(...packet);
+        } else {
+            socket.to(adminId).emit(...packet);
+        }
     });
 });
 
