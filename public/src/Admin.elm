@@ -4,9 +4,10 @@ import Browser exposing (Document)
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-import Socket exposing (recievedVote, startPoll, endPoll, userJoined, userLeft)
+import Socket exposing (recievedVote, userJoined, userLeft, send)
 import Url exposing (Protocol(..), Url)
 import UrlUtils exposing (baseUrl)
+import Vote as Vote
 
 
 type Msg
@@ -14,7 +15,7 @@ type Msg
     | UserLeft String
     | StartPoll
     | EndPoll
-    | RecievedVote ( String, Bool )
+    | RecievedVote (Result String Vote.Vote)
 
 
 type alias Model =
@@ -42,7 +43,7 @@ update msg model =
             ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
 
         ( UserJoined userName, Just _ ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, startPoll () )
+            ( { model | participants = model.participants ++ [ userName ] }, send "start poll" )
 
         ( UserLeft userName, _ ) ->
             let
@@ -54,12 +55,12 @@ update msg model =
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just [] }, startPoll () )
+            ( { model | poll = Just [] }, send "start poll" )
 
         ( EndPoll, Just _ ) ->
-            ( { model | poll = Nothing }, endPoll () )
+            ( { model | poll = Nothing }, send "end poll" )
 
-        ( RecievedVote vote, Just votes ) ->
+        ( RecievedVote (Ok vote), Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
 
         _ ->
@@ -71,7 +72,7 @@ subscriptions _ =
     Sub.batch
         [ userJoined UserJoined
         , userLeft UserLeft
-        , recievedVote RecievedVote
+        , recievedVote (Vote.decode >> RecievedVote)
         ]
 
 

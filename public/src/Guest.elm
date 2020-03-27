@@ -3,7 +3,8 @@ module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
 import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
-import Socket exposing (pollStarting, pollEnded, castVote)
+import Socket exposing (pollStarting, pollEnded, sendJson)
+import Vote as Vote
 
 
 type Msg
@@ -38,7 +39,10 @@ update msg model =
             ( { model | poll = Nothing }, Cmd.none )
 
         ( VoteClicked vote, Just _ ) ->
-            ( { model | poll = Just (Voted vote) }, castVote ( model.userName, vote ) )
+            let
+                voteJson = Vote.encode ( model.userName, vote )
+            in
+            ( { model | poll = Just (Voted vote) }, sendJson ( "cast vote", voteJson ) )
 
         _ ->
             ( model, Cmd.none )
