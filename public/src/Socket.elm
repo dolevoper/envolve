@@ -35,7 +35,7 @@ port startPoll : () -> Cmd msg
 port pollStarting : (() -> msg) -> Sub msg
 
 
-port castVote : Bool -> Cmd msg
+port castVote : ( String, Bool ) -> Cmd msg
 
 
-port recievedVote : (Bool -> msg) -> Sub msg
+port recievedVote : (( String, Bool ) -> msg) -> Sub msg

@@ -34,7 +34,7 @@ update msg model =
             ( { model | poll = Just NotVoted }, Cmd.none )
 
         ( VoteClicked vote, Just _ ) ->
-            ( { model | poll = Just (Voted vote) }, castVote vote )
+            ( { model | poll = Just (Voted vote) }, castVote ( model.userName, vote ) )
 
         _ ->
             ( model, Cmd.none )

@@ -1,18 +1,19 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Url exposing (Url, Protocol(..))
-import Html exposing (Html, a, button, div, text, ul, li)
+import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-import Socket exposing(userJoined, userLeft, startPoll, recievedVote)
+import Socket exposing (recievedVote, startPoll, userJoined, userLeft)
+import Url exposing (Protocol(..), Url)
+import UrlUtils exposing (baseUrl)
 
 
 type Msg
     = UserJoined String
     | UserLeft String
     | StartPoll
-    | RecievedVote Bool
+    | RecievedVote ( String, Bool )
 
 
 type alias Model =
@@ -25,9 +26,7 @@ type alias Model =
 
 
 type alias AdminPollData =
-    { yes : Int
-    , no : Int
-    }
+    List ( String, Bool )
 
 
 init : { userName : String, url : Url, roomId : String } -> ( Model, Cmd Msg )
@@ -45,16 +44,19 @@ update msg model =
             ( { model | participants = model.participants ++ [ userName ] }, startPoll () )
 
         ( UserLeft userName, _ ) ->
-            ( { model | participants = List.filter ((/=) userName) model.participants }, Cmd.none )
+            let
+                participants = List.filter ((/=) userName) model.participants
+                poll = Maybe.map (List.filter (Tuple.first >> (/=) userName)) model.poll
+            in
+            ( { model | participants = participants, poll = poll }
+            , Cmd.none
+            )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just (AdminPollData 0 0) }, startPoll () )
+            ( { model | poll = Just [] }, startPoll () )
 
-        ( RecievedVote True, Just { yes, no } ) ->
-            ( { model | poll = Just (AdminPollData (yes + 1) no) }, Cmd.none )
-
-        ( RecievedVote False, Just { yes, no } ) ->
-            ( { model | poll = Just (AdminPollData yes (no + 1)) }, Cmd.none )
+        ( RecievedVote vote, Just votes ) ->
+            ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -72,21 +74,22 @@ subscriptions _ =
 view : Model -> Document Msg
 view model =
     let
-        inviteLink = buildInviteLink model.url model.roomId
+        inviteLink =
+            buildInviteLink model.url model.roomId
     in
-        { title = "Envolve - Home"
-        , body =
-            [ div []
-                [ div [] [ text ("Hello " ++ model.userName) ]
-                , div []
-                    [ text "Invite people to join using this link: "
-                    , externalLink inviteLink inviteLink
-                    ]
-                , viewParticipants model.participants
-                , viewAdminPollSection model.poll
+    { title = "Envolve - Home"
+    , body =
+        [ div []
+            [ div [] [ text ("Hello " ++ model.userName) ]
+            , div []
+                [ text "Invite people to join using this link: "
+                , externalLink inviteLink inviteLink
                 ]
+            , viewParticipants model.participants
+            , viewAdminPollSection model.poll
             ]
-        }
+        ]
+    }
 
 
 viewParticipants : List String -> Html Msg
@@ -98,7 +101,8 @@ viewParticipants participants =
 
 
 viewParticipant : String -> Html Msg
-viewParticipant userName = li [] [ text userName ]
+viewParticipant userName =
+    li [] [ text userName ]
 
 
 viewAdminPollSection : Maybe AdminPollData -> Html Msg
@@ -108,21 +112,21 @@ viewAdminPollSection adminPollData =
             div []
                 [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
 
-        Just { yes, no } ->
+        Just votes ->
+            let
+                yesVotes =
+                    List.length (List.filter Tuple.second votes)
+
+                noVotes =
+                    List.length votes - yesVotes
+            in
             div []
-                [ text ("Yes: " ++ String.fromInt yes ++ ", No: " ++ String.fromInt no) ]
+                [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes) ]
 
 
 buildInviteLink : Url -> String -> String
-buildInviteLink url roomId =
-    let
-        schema =
-            case url.protocol of
-                Http -> "http://"
-                Https -> "https://"
-        port_ = Maybe.map (String.fromInt >> String.append ":") url.port_
-    in
-        schema ++ url.host ++ Maybe.withDefault "" port_ ++ "/" ++ roomId
+buildInviteLink url roomId = baseUrl url ++ "/" ++ roomId
+
 
 externalLink : String -> String -> Html Msg
 externalLink url displayText =
