@@ -11,8 +11,8 @@
 	<script>
 		const app = Elm.Main.init();
 
-		app.ports.connect.subscribe(function (name) {
-			const socket = io(`${window.location.host}?userName=${name}&roomId=${window.location.pathname.slice(1)}`);
+		app.ports.connect.subscribe(function (connectionString) {
+			const socket = io(connectionString);
 
 			socket.on('disconnect', () => app.ports.disconnected.send(null));
 

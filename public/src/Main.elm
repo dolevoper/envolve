@@ -46,8 +46,8 @@ type Page
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url _ =
-    toAppState url (initPage Login.init Login LoginMsg flags)
+init _ url _ =
+    toAppState url (initPage Login.init Login LoginMsg url)
 
 
 initPage : (pageFlags -> ( pageModel, Cmd pageMsg )) -> (pageModel -> Page) -> (pageMsg -> Msg) -> pageFlags -> ( Page, Cmd Msg )
@@ -95,7 +95,7 @@ update msg model =
         ( Disconnected, _ ) ->
             ( model, Nav.load baseUrl )
 
-        ( LoginMsg Login.Connected, Login (Login.PendingConnection userName) ) ->
+        ( LoginMsg Login.Connected, Login { userName } ) ->
             toAppState model.url (initGuestPage userName)
 
         ( GuestMsg (Guest.Managing roomId), Guest { userName } ) ->

@@ -1,10 +1,14 @@
-port module Login exposing (Msg(..), Model(..), init, update, view, subscriptions)
+port module Login exposing (FormState(..), Model, Msg(..), init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
+import Url exposing (Protocol(..), Url)
+import Url.Parser exposing (parse, string)
+import Url.Builder as UrlBuilder exposing (crossOrigin)
+import UrlUtils exposing (baseUrl)
 
 
 port connect : String -> Cmd msg
@@ -19,26 +23,34 @@ type Msg
     | Connected
 
 
-type Model
-    = InputtingUserName String
-    | PendingConnection String
+type alias Model =
+    { baseUrl : String
+    , roomId : Maybe String
+    , userName : String
+    , formState : FormState
+    }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( InputtingUserName "", Cmd.none )
+type FormState
+    = InputtingUserName
+    | PendingConnection
+
+
+init : Url -> ( Model, Cmd Msg )
+init url =
+    ( { baseUrl = baseUrl url, roomId = parse string url, userName = "", formState = InputtingUserName }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
-        ( UserNameEntered newUserName, InputtingUserName _ ) ->
-            ( InputtingUserName newUserName, Cmd.none )
+    case ( msg, model.formState ) of
+        ( UserNameEntered newUserName, InputtingUserName ) ->
+            ( { model | userName = newUserName }, Cmd.none )
 
-        ( FormSubmit, InputtingUserName currentUserName ) ->
-            ( PendingConnection currentUserName, connect currentUserName )
+        ( FormSubmit, InputtingUserName ) ->
+            ( { model | formState = PendingConnection }, connect (buildConnectionString model.baseUrl model.userName model.roomId) )
 
-        ( Connected, PendingConnection _ ) ->
+        ( Connected, PendingConnection ) ->
             ( model, Cmd.none )
 
         ( _, _ ) ->
@@ -54,12 +66,12 @@ view : Model -> Document Msg
 view model =
     { title = "Envolve - Login"
     , body =
-        case model of
-            InputtingUserName currentUserName ->
-                [ viewInput currentUserName ]
+        case model.formState of
+            InputtingUserName ->
+                [ viewInput model.userName ]
 
-            PendingConnection currentUserName ->
-                [ viewPending currentUserName ]
+            PendingConnection ->
+                [ viewPending model.userName ]
     }
 
 
@@ -79,6 +91,13 @@ viewPending currentUserName =
         , input [ id "name-input", value currentUserName, disabled True ] []
         , button [ disabled True ] [ text "Enter" ]
         ]
+
+
+buildConnectionString : String -> String -> Maybe String -> String
+buildConnectionString baseUrl userName maybeRoomId = crossOrigin baseUrl []
+    [ UrlBuilder.string "userName" userName
+    , UrlBuilder.string "roomId" (Maybe.withDefault "" maybeRoomId)
+    ]
 
 
 onSubmit : Msg -> Html.Attribute Msg
