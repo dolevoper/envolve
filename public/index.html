@@ -24,9 +24,9 @@
 
 			socket.on('managing', ({ roomId }) => app.ports.managing.send(roomId));
 
-			socket.on('start poll', () => app.ports.pollStarting.send(null));
+			socket.on('start poll', () => app.ports.incomingMessage.send('start poll'));
 
-			socket.on('end poll', () => app.ports.pollEnded.send(null));
+			socket.on('end poll', () => app.ports.incomingMessage.send('end poll'));
 
 			socket.on('cast vote', ({ data }) => {
 				app.ports.recievedVote.send(data);

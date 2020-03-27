@@ -3,14 +3,16 @@ module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
 import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
-import Socket exposing (pollStarting, pollEnded, sendJson)
+import Socket as Socket
 import Vote as Vote
+import Dict as Dict
 
 
 type Msg
     = PollStarting
     | PollEnded
     | VoteClicked Bool
+    | NoOp
 
 
 type alias Model =
@@ -42,18 +44,22 @@ update msg model =
             let
                 voteJson = Vote.encode ( model.userName, vote )
             in
-            ( { model | poll = Just (Voted vote) }, sendJson ( "cast vote", voteJson ) )
+            ( { model | poll = Just (Voted vote) }, Socket.sendJson ( "cast vote", voteJson ) )
 
         _ ->
             ( model, Cmd.none )
 
 
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch
-        [ pollStarting (always PollStarting)
-        , pollEnded (always PollEnded)
-        ]
+    Socket.on NoOp
+        (Dict.fromList
+            [ ( "start poll", PollStarting )
+            , ( "end poll", PollEnded )
+            ]
+        )
+
 
 
 view : Model -> Document Msg

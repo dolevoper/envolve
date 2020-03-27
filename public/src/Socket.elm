@@ -1,6 +1,7 @@
-port module Socket exposing (connect, connected, disconnected, managing, userJoined, userLeft, pollStarting, pollEnded, recievedVote, send, sendJson)
+port module Socket exposing (connect, connected, disconnected, managing, userJoined, userLeft, recievedVote, send, sendJson, on)
 
 import Json.Encode as Encode
+import Dict as Dict
 
 -- Connection handling ports
 
@@ -31,12 +32,6 @@ port userLeft : (String -> msg) -> Sub msg
 -- Poll management ports
 
 
-port pollStarting : (() -> msg) -> Sub msg
-
-
-port pollEnded : (() -> msg) -> Sub msg
-
-
 port recievedVote : (Encode.Value -> msg) -> Sub msg
 
 
@@ -44,3 +39,14 @@ port send : String -> Cmd msg
 
 
 port sendJson : ( String, Encode.Value ) -> Cmd msg
+
+
+port incomingMessage : (String -> msg) -> Sub msg
+
+
+on : msg -> Dict.Dict String msg -> Sub msg
+on  toNoEvent eventHandlers =
+    let
+        getEventHandler eventName = Maybe.withDefault toNoEvent (Dict.get eventName eventHandlers)
+    in
+    incomingMessage getEventHandler
