@@ -1,4 +1,4 @@
-port module Socket exposing (connect, connected, disconnected, managing, userJoined, userLeft, startPoll, pollStarting, castVote, recievedVote)
+port module Socket exposing (connect, connected, disconnected, managing, userJoined, userLeft, startPoll, pollStarting, endPoll, pollEnded, castVote, recievedVote)
 
 -- Connection handling ports
 
@@ -33,6 +33,12 @@ port startPoll : () -> Cmd msg
 
 
 port pollStarting : (() -> msg) -> Sub msg
+
+
+port endPoll : () -> Cmd msg
+
+
+port pollEnded : (() -> msg) -> Sub msg
 
 
 port castVote : ( String, Bool ) -> Cmd msg

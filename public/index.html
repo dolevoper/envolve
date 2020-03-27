@@ -26,10 +26,16 @@
 
 			socket.on('start poll', () => app.ports.pollStarting.send(null));
 
+			socket.on('end poll', () => app.ports.pollEnded.send(null));
+
 			socket.on('cast vote', ({ vote }) => app.ports.recievedVote.send(vote));
 
 			app.ports.startPoll.subscribe(function () {
 				socket.emit('start poll');
+			});
+
+			app.ports.endPoll.subscribe(function () {
+				socket.emit('end poll');
 			});
 
 			app.ports.castVote.subscribe(function (vote) {

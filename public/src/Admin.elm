@@ -4,7 +4,7 @@ import Browser exposing (Document)
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-import Socket exposing (recievedVote, startPoll, userJoined, userLeft)
+import Socket exposing (recievedVote, startPoll, endPoll, userJoined, userLeft)
 import Url exposing (Protocol(..), Url)
 import UrlUtils exposing (baseUrl)
 
@@ -13,6 +13,7 @@ type Msg
     = UserJoined String
     | UserLeft String
     | StartPoll
+    | EndPoll
     | RecievedVote ( String, Bool )
 
 
@@ -54,6 +55,9 @@ update msg model =
 
         ( StartPoll, Nothing ) ->
             ( { model | poll = Just [] }, startPoll () )
+
+        ( EndPoll, Just _ ) ->
+            ( { model | poll = Nothing }, endPoll () )
 
         ( RecievedVote vote, Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
@@ -121,7 +125,9 @@ viewAdminPollSection adminPollData =
                     List.length votes - yesVotes
             in
             div []
-                [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes) ]
+                [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)
+                , button [ onClick EndPoll ] [ text "Close Poll" ]
+                ]
 
 
 buildInviteLink : Url -> String -> String

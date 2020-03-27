@@ -3,11 +3,12 @@ module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
 import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
-import Socket exposing (pollStarting, castVote)
+import Socket exposing (pollStarting, pollEnded, castVote)
 
 
 type Msg
     = PollStarting
+    | PollEnded
     | VoteClicked Bool
 
 
@@ -33,6 +34,9 @@ update msg model =
         ( PollStarting, Nothing ) ->
             ( { model | poll = Just NotVoted }, Cmd.none )
 
+        ( PollEnded, Just _ ) ->
+            ( { model | poll = Nothing }, Cmd.none )
+
         ( VoteClicked vote, Just _ ) ->
             ( { model | poll = Just (Voted vote) }, castVote ( model.userName, vote ) )
 
@@ -42,7 +46,10 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    pollStarting (always PollStarting)
+    Sub.batch
+        [ pollStarting (always PollStarting)
+        , pollEnded (always PollEnded)
+        ]
 
 
 view : Model -> Document Msg
