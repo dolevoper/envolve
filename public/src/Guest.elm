@@ -29,12 +29,15 @@ init userName =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        PollStarting ->
+    case ( msg, model.poll ) of
+        ( PollStarting, Nothing ) ->
             ( { model | poll = Just NotVoted }, Cmd.none )
 
-        VoteClicked vote ->
+        ( VoteClicked vote, Just _ ) ->
             ( { model | poll = Just (Voted vote) }, castVote vote )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

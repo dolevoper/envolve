@@ -38,8 +38,11 @@ init { userName, url, roomId } =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.poll ) of
-        ( UserJoined userName, _ ) ->
+        ( UserJoined userName, Nothing ) ->
             ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
+
+        ( UserJoined userName, Just _ ) ->
+            ( { model | participants = model.participants ++ [ userName ] }, startPoll () )
 
         ( UserLeft userName, _ ) ->
             ( { model | participants = List.filter ((/=) userName) model.participants }, Cmd.none )
