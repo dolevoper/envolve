@@ -1,22 +1,13 @@
-port module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
+module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
-
-
-port managing : (String -> msg) -> Sub msg
-
-
-port pollStarting : (() -> msg) -> Sub msg
-
-
-port castVote : Bool -> Cmd msg
+import Socket exposing (pollStarting, castVote)
 
 
 type Msg
-    = Managing String
-    | PollStarting
+    = PollStarting
     | VoteClicked Bool
 
 
@@ -45,16 +36,10 @@ update msg model =
         VoteClicked vote ->
             ( { model | poll = Just (Voted vote) }, castVote vote )
 
-        _ ->
-            ( model, Cmd.none )
-
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch
-        [ managing Managing
-        , pollStarting (always PollStarting)
-        ]
+    pollStarting (always PollStarting)
 
 
 view : Model -> Document Msg

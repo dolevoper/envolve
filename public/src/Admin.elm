@@ -1,22 +1,11 @@
-port module Admin exposing (Model, Msg, init, subscriptions, update, view)
+module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Url exposing (Url, Protocol(..))
 import Html exposing (Html, a, button, div, text, ul, li)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-
-
-port userJoined : (String -> msg) -> Sub msg
-
-
-port userLeft : (String -> msg) -> Sub msg
-
-
-port startPoll : () -> Cmd msg
-
-
-port recievedVote : (Bool -> msg) -> Sub msg
+import Socket exposing(userJoined, userLeft, startPoll, recievedVote)
 
 
 type Msg

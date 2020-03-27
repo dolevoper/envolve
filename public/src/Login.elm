@@ -1,4 +1,4 @@
-port module Login exposing (FormState(..), Model, Msg(..), init, subscriptions, update, view)
+module Login exposing (FormState(..), Model, Msg(..), init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Html exposing (Html, button, div, form, input, label, text)
@@ -9,18 +9,12 @@ import Url exposing (Protocol(..), Url)
 import Url.Parser exposing (parse, string)
 import Url.Builder as UrlBuilder exposing (crossOrigin)
 import UrlUtils exposing (baseUrl)
-
-
-port connect : String -> Cmd msg
-
-
-port connected : (() -> msg) -> Sub msg
+import Socket exposing (connect)
 
 
 type Msg
     = UserNameEntered String
     | FormSubmit
-    | Connected
 
 
 type alias Model =
@@ -50,16 +44,13 @@ update msg model =
         ( FormSubmit, InputtingUserName ) ->
             ( { model | formState = PendingConnection }, connect (buildConnectionString model.baseUrl model.userName model.roomId) )
 
-        ( Connected, PendingConnection ) ->
-            ( model, Cmd.none )
-
         ( _, _ ) ->
             ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    connected (always Connected)
+    Sub.none
 
 
 view : Model -> Document Msg

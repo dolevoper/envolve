@@ -1,4 +1,4 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Admin as Admin
 import Browser exposing (Document, application)
@@ -7,9 +7,8 @@ import Guest as Guest
 import Html as Html
 import Login as Login
 import Url exposing (Protocol(..), Url)
-
-
-port disconnected : (() -> msg) -> Sub msg
+import Socket exposing (connected, managing, disconnected)
+import UrlUtils exposing (baseUrl)
 
 
 main : Program () Model Msg
@@ -27,6 +26,8 @@ main =
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | Connected
+    | Managing String
     | Disconnected
     | LoginMsg Login.Msg
     | AdminMsg Admin.Msg
@@ -62,20 +63,6 @@ initPage initiator fromPageModel fromPageMsg flags =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        schema =
-            case model.url.protocol of
-                Http ->
-                    "http://"
-
-                Https ->
-                    "https://"
-
-        port_ =
-            Maybe.map (String.fromInt >> String.append ":") model.url.port_
-
-        baseUrl =
-            schema ++ model.url.host ++ Maybe.withDefault "" port_
-
         updateLoginPage =
             updatePage Login.update LoginMsg Login
 
@@ -92,14 +79,14 @@ update msg model =
             initPage Guest.init Guest GuestMsg
     in
     case ( msg, model.page ) of
-        ( Disconnected, _ ) ->
-            ( model, Nav.load baseUrl )
-
-        ( LoginMsg Login.Connected, Login { userName } ) ->
+        ( Connected, Login { userName } ) ->
             toAppState model.url (initGuestPage userName)
 
-        ( GuestMsg (Guest.Managing roomId), Guest { userName } ) ->
+        ( Managing roomId, Guest { userName } ) ->
             toAppState model.url (initAdminPage { userName = userName, url = model.url, roomId = roomId })
+
+        ( Disconnected, _ ) ->
+            ( model, Nav.load (baseUrl model.url) )
 
         ( LoginMsg loginMsg, Login login ) ->
             toAppState model.url (updateLoginPage loginMsg login)
@@ -131,7 +118,10 @@ subscriptions model =
     in
     case model.page of
         Login login ->
-            Sub.map LoginMsg (Login.subscriptions login)
+            Sub.batch
+                [ Sub.map LoginMsg (Login.subscriptions login)
+                , connected (always Connected)
+                ]
 
         Admin admin ->
             Sub.batch
@@ -142,6 +132,7 @@ subscriptions model =
         Guest guest ->
             Sub.batch
                 [ Sub.map GuestMsg (Guest.subscriptions guest)
+                , managing Managing
                 , disconnectedSubscription
                 ]
 
