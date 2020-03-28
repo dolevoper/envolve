@@ -27,6 +27,8 @@ const closeRoom = roomId => {
     delete roomsById[roomId];
 };
 
+const elmSocketEvent = (name, payload = null) => ['elm socket event', { name, payload }];
+
 app.use(express.static(`${__dirname}/public`));
 
 app.get('/:roomId', function (req, res) {
@@ -60,10 +62,10 @@ io.on('connection', function (socket) {
     socket.join(roomId);
 
     if (isAdmin) {
-        socket.emit('managing', { roomId });
+        socket.emit(...elmSocketEvent('managing', roomId));
         console.log(`${userName} created room ${roomId}`);
     } else {
-        socket.to(adminId).emit('new user', { userName });
+        socket.to(adminId).emit(...elmSocketEvent('new user', userName));
         console.log(`${userName} joined room ${roomId}`);
     }
 
@@ -71,7 +73,7 @@ io.on('connection', function (socket) {
         console.log(`${userName} disconnected`);
 
         if (!isAdmin) {
-            io.to(adminId).emit('user left', { userName });
+            io.to(adminId).emit(...elmSocketEvent('user left', userName));
         } else {
             closeRoom(roomId);
 
