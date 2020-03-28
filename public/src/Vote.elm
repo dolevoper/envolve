@@ -20,7 +20,7 @@ decode value =
     let
         decodeResult = Decode.decodeValue decoder value
     in
-    Result.mapError (always "failed parsing vote") decodeResult
+    Result.mapError Decode.errorToString decodeResult
 
 
 decoder : Decode.Decoder Vote

@@ -1,21 +1,24 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
+import Dict as Dict
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-import Socket exposing (recievedVote, userJoined, userLeft, send)
+import Json.Decode as Decode
+import Socket as Socket
 import Url exposing (Protocol(..), Url)
 import UrlUtils exposing (baseUrl)
 import Vote as Vote
 
 
 type Msg
-    = UserJoined String
-    | UserLeft String
+    = UserJoined (Result String String)
+    | UserLeft (Result String String)
     | StartPoll
     | EndPoll
     | RecievedVote (Result String Vote.Vote)
+    | NoOp
 
 
 type alias Model =
@@ -39,26 +42,29 @@ init { userName, url, roomId } =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.poll ) of
-        ( UserJoined userName, Nothing ) ->
+        ( UserJoined (Ok userName), Nothing ) ->
             ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
 
-        ( UserJoined userName, Just _ ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, send "start poll" )
+        ( UserJoined (Ok userName), Just _ ) ->
+            ( { model | participants = model.participants ++ [ userName ] }, Socket.send "start poll" )
 
-        ( UserLeft userName, _ ) ->
+        ( UserLeft (Ok userName), _ ) ->
             let
-                participants = List.filter ((/=) userName) model.participants
-                poll = Maybe.map (List.filter (Tuple.first >> (/=) userName)) model.poll
+                participants =
+                    List.filter ((/=) userName) model.participants
+
+                poll =
+                    Maybe.map (List.filter (Tuple.first >> (/=) userName)) model.poll
             in
             ( { model | participants = participants, poll = poll }
             , Cmd.none
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just [] }, send "start poll" )
+            ( { model | poll = Just [] }, Socket.send "start poll" )
 
         ( EndPoll, Just _ ) ->
-            ( { model | poll = Nothing }, send "end poll" )
+            ( { model | poll = Nothing }, Socket.send "end poll" )
 
         ( RecievedVote (Ok vote), Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
@@ -69,11 +75,18 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch
-        [ userJoined UserJoined
-        , userLeft UserLeft
-        , recievedVote (Vote.decode >> RecievedVote)
-        ]
+    let
+        decodeString =
+            Decode.decodeValue Decode.string >> Result.mapError Decode.errorToString
+    in
+    Socket.on NoOp
+        NoOp
+        (Dict.fromList
+            [ ( "new user", Socket.EventWithPayload (decodeString >> UserJoined) )
+            , ( "user left", Socket.EventWithPayload (decodeString >> UserLeft) )
+            , ( "cast vote", Socket.EventWithPayload (Vote.decode >> RecievedVote) )
+            ]
+        )
 
 
 view : Model -> Document Msg
@@ -132,7 +145,8 @@ viewAdminPollSection adminPollData =
 
 
 buildInviteLink : Url -> String -> String
-buildInviteLink url roomId = baseUrl url ++ "/" ++ roomId
+buildInviteLink url roomId =
+    baseUrl url ++ "/" ++ roomId
 
 
 externalLink : String -> String -> Html Msg

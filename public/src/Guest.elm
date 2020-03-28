@@ -53,10 +53,10 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Socket.on NoOp
-        (Dict.fromList
-            [ ( "start poll", PollStarting )
-            , ( "end poll", PollEnded )
+    Socket.on NoOp NoOp
+        ( Dict.fromList
+            [ ( "start poll", Socket.EmptyEvent PollStarting )
+            , ( "end poll", Socket.EmptyEvent PollEnded )
             ]
         )
 

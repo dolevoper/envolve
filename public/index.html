@@ -18,19 +18,17 @@
 
 			socket.on('connect', () => app.ports.connected.send(null));
 
-			socket.on('new user', ({ userName }) => app.ports.userJoined.send(userName));
+			socket.on('new user', ({ userName }) => app.ports.incomingMessage.send({ name: 'new user', payload: userName }));
 
-			socket.on('user left', ({ userName }) => app.ports.userLeft.send(userName));
+			socket.on('user left', ({ userName }) => app.ports.incomingMessage.send({ name: 'user left', payload: userName }));
 
-			socket.on('managing', ({ roomId }) => app.ports.managing.send(roomId));
+			socket.on('managing', ({ roomId }) => app.ports.incomingMessage.send({ name: 'managing', payload: roomId }));
 
-			socket.on('start poll', () => app.ports.incomingMessage.send('start poll'));
+			socket.on('start poll', () => app.ports.incomingMessage.send({ name: 'start poll', payload: null }));
 
-			socket.on('end poll', () => app.ports.incomingMessage.send('end poll'));
+			socket.on('end poll', () => app.ports.incomingMessage.send({ name: 'end poll', payload: null }));
 
-			socket.on('cast vote', ({ data }) => {
-				app.ports.recievedVote.send(data);
-			});
+			socket.on('cast vote', ({ data }) => app.ports.incomingMessage.send({ name: 'cast vote', payload: data }));
 
 			app.ports.send.subscribe(function (event) {
 				socket.emit(event);

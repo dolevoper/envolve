@@ -1,4 +1,4 @@
-port module Socket exposing (connect, connected, disconnected, managing, userJoined, userLeft, recievedVote, send, sendJson, on)
+port module Socket exposing (connect, connected, disconnected, send, sendJson, on, SocketEventHandler(..), SocketEvent)
 
 import Json.Encode as Encode
 import Dict as Dict
@@ -15,38 +15,45 @@ port connected : (() -> msg) -> Sub msg
 port disconnected : (() -> msg) -> Sub msg
 
 
-port managing : (String -> msg) -> Sub msg
-
-
-
--- User management ports
-
-
-port userJoined : (String -> msg) -> Sub msg
-
-
-port userLeft : (String -> msg) -> Sub msg
-
-
-
--- Poll management ports
-
-
-port recievedVote : (Encode.Value -> msg) -> Sub msg
-
-
 port send : String -> Cmd msg
 
 
 port sendJson : ( String, Encode.Value ) -> Cmd msg
 
 
-port incomingMessage : (String -> msg) -> Sub msg
+port incomingMessage : (SocketEvent -> msg) -> Sub msg
 
 
-on : msg -> Dict.Dict String msg -> Sub msg
-on  toNoEvent eventHandlers =
+type alias SocketEvent =
+    { name: String
+    , payload : Maybe Encode.Value
+    }
+
+
+type SocketEventHandler msg
+    = EmptyEvent msg
+    | EventWithPayload (Encode.Value -> msg)
+
+
+on : msg -> msg -> Dict.Dict String (SocketEventHandler msg) -> Sub msg
+on  unhandledEvent socketErrorEvent eventHandlers =
     let
-        getEventHandler eventName = Maybe.withDefault toNoEvent (Dict.get eventName eventHandlers)
+        getEventHandler : String -> Maybe (SocketEventHandler msg)
+        getEventHandler eventName = Dict.get eventName eventHandlers
+
+        handleEvent : Maybe (SocketEventHandler msg) -> SocketEvent -> msg
+        handleEvent handler event =
+            case ( handler, event.payload ) of
+                ( Nothing, _ ) ->
+                    unhandledEvent
+
+                ( Just (EmptyEvent message), _ ) ->
+                    message
+
+                ( Just (EventWithPayload _), Nothing ) ->
+                    socketErrorEvent
+
+                ( Just (EventWithPayload toMsg), Just payload ) ->
+                    toMsg payload
     in
-    incomingMessage getEventHandler
+    incomingMessage (\event -> let handler = getEventHandler event.name in handleEvent handler event)

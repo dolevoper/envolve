@@ -7,8 +7,10 @@ import Guest as Guest
 import Html as Html
 import Login as Login
 import Url exposing (Protocol(..), Url)
-import Socket exposing (connected, managing, disconnected)
+import Socket as Socket
 import UrlUtils exposing (baseUrl)
+import Dict as Dict
+import Json.Decode as Decode
 
 
 main : Program () Model Msg
@@ -27,11 +29,12 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | Connected
-    | Managing String
+    | Managing (Result String String)
     | Disconnected
     | LoginMsg Login.Msg
     | AdminMsg Admin.Msg
     | GuestMsg Guest.Msg
+    | NoOp
 
 
 type alias Model =
@@ -82,7 +85,7 @@ update msg model =
         ( Connected, Login { userName } ) ->
             toAppState model.url (initGuestPage userName)
 
-        ( Managing roomId, Guest { userName } ) ->
+        ( Managing (Ok roomId), Guest { userName } ) ->
             toAppState model.url (initAdminPage { userName = userName, url = model.url, roomId = roomId })
 
         ( Disconnected, _ ) ->
@@ -114,13 +117,14 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         disconnectedSubscription =
-            disconnected (always Disconnected)
+            Socket.disconnected (always Disconnected)
+        decodeString = Decode.decodeValue Decode.string >> Result.mapError Decode.errorToString
     in
     case model.page of
         Login login ->
             Sub.batch
                 [ Sub.map LoginMsg (Login.subscriptions login)
-                , connected (always Connected)
+                , Socket.connected (always Connected)
                 ]
 
         Admin admin ->
@@ -132,8 +136,11 @@ subscriptions model =
         Guest guest ->
             Sub.batch
                 [ Sub.map GuestMsg (Guest.subscriptions guest)
-                , managing Managing
                 , disconnectedSubscription
+                , Socket.on NoOp NoOp
+                    ( Dict.fromList
+                        [ ( "managing", Socket.EventWithPayload (decodeString >> Managing) ) ]
+                    )
                 ]
 
 
