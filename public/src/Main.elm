@@ -3,14 +3,14 @@ module Main exposing (main)
 import Admin as Admin
 import Browser exposing (Document, application)
 import Browser.Navigation as Nav
+import Dict as Dict
 import Guest as Guest
 import Html as Html
-import Login as Login
-import Url exposing (Protocol(..), Url)
-import Socket as Socket
-import UrlUtils exposing (baseUrl)
-import Dict as Dict
 import Json.Decode as Decode
+import Login as Login
+import Socket as Socket
+import Url exposing (Protocol(..), Url)
+import UrlUtils exposing (baseUrl)
 
 
 main : Program () Model Msg
@@ -118,7 +118,6 @@ subscriptions model =
     let
         disconnectedSubscription =
             Socket.disconnected (always Disconnected)
-        decodeString = Decode.decodeValue Decode.string >> Result.mapError Decode.errorToString
     in
     case model.page of
         Login login ->
@@ -137,9 +136,10 @@ subscriptions model =
             Sub.batch
                 [ Sub.map GuestMsg (Guest.subscriptions guest)
                 , disconnectedSubscription
-                , Socket.on NoOp NoOp
-                    ( Dict.fromList
-                        [ ( "managing", Socket.EventWithPayload (decodeString >> Managing) ) ]
+                , Socket.on NoOp
+                    NoOp
+                    (Dict.fromList
+                        [ ( "managing", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string Managing) ) ]
                     )
                 ]
 

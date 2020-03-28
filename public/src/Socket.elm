@@ -1,7 +1,10 @@
-port module Socket exposing (connect, connected, disconnected, send, sendJson, on, SocketEventHandler(..), SocketEvent)
+port module Socket exposing (Message, SocketEvent, SocketEventHandler(..), connect, connected, disconnected, eventPayloadHandler, on, send, sendJson)
 
-import Json.Encode as Encode
 import Dict as Dict
+import Json.Decode as Decode
+import Json.Encode as Encode
+
+
 
 -- Connection handling ports
 
@@ -25,7 +28,7 @@ port incomingMessage : (SocketEvent -> msg) -> Sub msg
 
 
 type alias SocketEvent =
-    { name: String
+    { name : String
     , payload : Maybe Encode.Value
     }
 
@@ -35,11 +38,16 @@ type SocketEventHandler msg
     | EventWithPayload (Encode.Value -> msg)
 
 
+type alias Message payload =
+    Result String payload
+
+
 on : msg -> msg -> Dict.Dict String (SocketEventHandler msg) -> Sub msg
-on  unhandledEvent socketErrorEvent eventHandlers =
+on unhandledEvent socketErrorEvent eventHandlers =
     let
         getEventHandler : String -> Maybe (SocketEventHandler msg)
-        getEventHandler eventName = Dict.get eventName eventHandlers
+        getEventHandler eventName =
+            Dict.get eventName eventHandlers
 
         handleEvent : Maybe (SocketEventHandler msg) -> SocketEvent -> msg
         handleEvent handler event =
@@ -56,4 +64,16 @@ on  unhandledEvent socketErrorEvent eventHandlers =
                 ( Just (EventWithPayload toMsg), Just payload ) ->
                     toMsg payload
     in
-    incomingMessage (\event -> let handler = getEventHandler event.name in handleEvent handler event)
+    incomingMessage
+        (\event ->
+            let
+                handler =
+                    getEventHandler event.name
+            in
+            handleEvent handler event
+        )
+
+
+eventPayloadHandler : Decode.Decoder payload -> (Message payload -> msg) -> Encode.Value -> msg
+eventPayloadHandler decoder toMsg =
+    Decode.decodeValue decoder >> Result.mapError Decode.errorToString >> toMsg

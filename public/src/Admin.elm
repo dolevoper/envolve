@@ -13,11 +13,11 @@ import Vote as Vote
 
 
 type Msg
-    = UserJoined (Result String String)
-    | UserLeft (Result String String)
+    = UserJoined (Socket.Message String)
+    | UserLeft (Socket.Message String)
     | StartPoll
     | EndPoll
-    | RecievedVote (Result String Vote.Vote)
+    | RecievedVote (Socket.Message Vote.Vote)
     | NoOp
 
 
@@ -75,16 +75,12 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    let
-        decodeString =
-            Decode.decodeValue Decode.string >> Result.mapError Decode.errorToString
-    in
     Socket.on NoOp
         NoOp
         (Dict.fromList
-            [ ( "new user", Socket.EventWithPayload (decodeString >> UserJoined) )
-            , ( "user left", Socket.EventWithPayload (decodeString >> UserLeft) )
-            , ( "cast vote", Socket.EventWithPayload (Vote.decode >> RecievedVote) )
+            [ ( "new user", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string UserJoined) )
+            , ( "user left", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string UserLeft) )
+            , ( "cast vote", Socket.EventWithPayload (Socket.eventPayloadHandler Vote.decoder RecievedVote) )
             ]
         )
 
