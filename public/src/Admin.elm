@@ -17,6 +17,7 @@ type Msg
     | UserLeft (Socket.Message String)
     | StartPoll
     | EndPoll
+    | ResetPoll
     | RecievedVote (Socket.Message Vote.Vote)
     | NoOp
 
@@ -65,6 +66,9 @@ update msg model =
 
         ( EndPoll, Just _ ) ->
             ( { model | poll = Nothing }, Socket.send "end poll" )
+
+        ( ResetPoll, Just _ ) ->
+            ( { model | poll = Just [] }, Socket.send "reset poll" )
 
         ( RecievedVote (Ok vote), Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
@@ -137,6 +141,7 @@ viewAdminPollSection adminPollData =
             div []
                 [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)
                 , button [ onClick EndPoll ] [ text "Close Poll" ]
+                , button [ onClick ResetPoll ] [ text "Reset Poll" ]
                 ]
 
 

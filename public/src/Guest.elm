@@ -11,6 +11,7 @@ import Dict as Dict
 type Msg
     = PollStarting
     | PollEnded
+    | PollReset
     | VoteClicked Bool
     | NoOp
 
@@ -40,6 +41,9 @@ update msg model =
         ( PollEnded, Just _ ) ->
             ( { model | poll = Nothing }, Cmd.none )
 
+        ( PollReset, Just _ ) ->
+            ( { model | poll = Just NotVoted }, Cmd.none )
+
         ( VoteClicked vote, Just _ ) ->
             let
                 voteJson = Vote.encode ( model.userName, vote )
@@ -57,6 +61,7 @@ subscriptions _ =
         ( Dict.fromList
             [ ( "start poll", Socket.EmptyEvent PollStarting )
             , ( "end poll", Socket.EmptyEvent PollEnded )
+            , ( "reset poll", Socket.EmptyEvent PollReset )
             ]
         )
 
