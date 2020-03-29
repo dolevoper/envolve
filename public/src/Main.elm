@@ -3,10 +3,8 @@ module Main exposing (main)
 import Admin as Admin
 import Browser exposing (Document, application)
 import Browser.Navigation as Nav
-import Dict as Dict
 import Guest as Guest
 import Html as Html
-import Json.Decode as Decode
 import Login as Login
 import Socket as Socket
 import Url exposing (Protocol(..), Url)
@@ -29,7 +27,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | Connected
-    | Managing (Result String String)
+    | Managing (Socket.IncomingMessage String)
     | Disconnected
     | LoginMsg Login.Msg
     | AdminMsg Admin.Msg
@@ -136,11 +134,7 @@ subscriptions model =
             Sub.batch
                 [ Sub.map GuestMsg (Guest.subscriptions guest)
                 , disconnectedSubscription
-                , Socket.on NoOp
-                    NoOp
-                    (Dict.fromList
-                        [ ( "managing", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string Managing) ) ]
-                    )
+                , Socket.listen NoOp (Socket.managing Managing)
                 ]
 
 

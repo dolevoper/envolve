@@ -4,8 +4,6 @@ import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
 import Socket as Socket
-import Vote as Vote
-import Dict as Dict
 
 
 type Msg
@@ -46,25 +44,22 @@ update msg model =
 
         ( VoteClicked vote, Just _ ) ->
             let
-                voteJson = Vote.encode ( model.userName, vote )
+                voteJson =
+                    ( model.userName, vote )
             in
-            ( { model | poll = Just (Voted vote) }, Socket.sendJson ( "cast vote", voteJson ) )
+            ( { model | poll = Just (Voted vote) }, Socket.raiseEvent (Socket.castVote voteJson) )
 
         _ ->
             ( model, Cmd.none )
 
 
-
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Socket.on NoOp NoOp
-        ( Dict.fromList
-            [ ( "start poll", Socket.EmptyEvent PollStarting )
-            , ( "end poll", Socket.EmptyEvent PollEnded )
-            , ( "reset poll", Socket.EmptyEvent PollReset )
-            ]
-        )
-
+    Sub.batch
+        [ Socket.listen NoOp (Socket.pollStarted PollStarting)
+        , Socket.listen NoOp (Socket.pollEnded PollEnded)
+        , Socket.listen NoOp (Socket.pollReset PollReset)
+        ]
 
 
 view : Model -> Document Msg
@@ -91,4 +86,13 @@ viewGuestPollSection pollData =
 
         Voted vote ->
             div []
-                [ text ("Your vote: " ++ if vote then "Yes" else "No") ]
+                [ text
+                    ("Your vote: "
+                        ++ (if vote then
+                                "Yes"
+
+                            else
+                                "No"
+                           )
+                    )
+                ]

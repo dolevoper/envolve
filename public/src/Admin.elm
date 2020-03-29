@@ -1,25 +1,22 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Dict as Dict
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
-import Json.Decode as Decode
 import Socket as Socket
-import Socket.Events as SocketEvents
 import Url exposing (Protocol(..), Url)
 import UrlUtils exposing (baseUrl)
 import Vote as Vote
 
 
 type Msg
-    = UserJoined (Socket.Message String)
-    | UserLeft (Socket.Message String)
+    = UserJoined (Socket.IncomingMessage String)
+    | UserLeft (Socket.IncomingMessage String)
     | StartPoll
     | EndPoll
     | ResetPoll
-    | RecievedVote (Socket.Message Vote.Vote)
+    | RecievedVote (Socket.IncomingMessage Vote.Vote)
     | NoOp
 
 
@@ -48,7 +45,7 @@ update msg model =
             ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
 
         ( UserJoined (Ok userName), Just _ ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, Socket.raiseEvent SocketEvents.startPoll )
+            ( { model | participants = model.participants ++ [ userName ] }, Socket.raiseEvent Socket.startPoll )
 
         ( UserLeft (Ok userName), _ ) ->
             let
@@ -63,13 +60,13 @@ update msg model =
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just [] }, Socket.raiseEvent SocketEvents.startPoll )
+            ( { model | poll = Just [] }, Socket.raiseEvent Socket.startPoll )
 
         ( EndPoll, Just _ ) ->
-            ( { model | poll = Nothing }, Socket.raiseEvent SocketEvents.endPoll )
+            ( { model | poll = Nothing }, Socket.raiseEvent Socket.endPoll )
 
         ( ResetPoll, Just _ ) ->
-            ( { model | poll = Just [] }, Socket.raiseEvent SocketEvents.resetPoll )
+            ( { model | poll = Just [] }, Socket.raiseEvent Socket.resetPoll )
 
         ( RecievedVote (Ok vote), Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
@@ -80,14 +77,11 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Socket.on NoOp
-        NoOp
-        (Dict.fromList
-            [ ( "new user", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string UserJoined) )
-            , ( "user left", Socket.EventWithPayload (Socket.eventPayloadHandler Decode.string UserLeft) )
-            , ( "cast vote", Socket.EventWithPayload (Socket.eventPayloadHandler Vote.decoder RecievedVote) )
-            ]
-        )
+    Sub.batch
+        [ Socket.listen NoOp (Socket.newUser UserJoined)
+        , Socket.listen NoOp (Socket.userLeft UserLeft)
+        , Socket.listen NoOp (Socket.voteRecieved RecievedVote)
+        ]
 
 
 view : Model -> Document Msg

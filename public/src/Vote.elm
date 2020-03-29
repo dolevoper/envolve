@@ -1,10 +1,11 @@
-module Vote exposing (Vote, encode, decode, decoder)
+module Vote exposing (Vote, decode, decoder, encode)
 
-import Json.Encode as Encode
 import Json.Decode as Decode
+import Json.Encode as Encode
 
 
-type alias Vote = ( String, Bool )
+type alias Vote =
+    ( String, Bool )
 
 
 encode : Vote -> Encode.Value
@@ -18,7 +19,8 @@ encode ( userName, vote ) =
 decode : Encode.Value -> Result String Vote
 decode value =
     let
-        decodeResult = Decode.decodeValue decoder value
+        decodeResult =
+            Decode.decodeValue decoder value
     in
     Result.mapError Decode.errorToString decodeResult
 

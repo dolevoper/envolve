@@ -1,13 +1,111 @@
-port module Socket exposing (Message, SocketEvent, SocketEventHandler(..), connect, connected, disconnected, raiseEvent, eventPayloadHandler, on, sendJson)
+port module Socket exposing
+    ( IncomingMessage
+    , castVote
+    , connect
+    , connected
+    , disconnected
+    , endPoll
+    , listen
+    , managing
+    , newUser
+    , pollEnded
+    , pollReset
+    , pollStarted
+    , raiseEvent
+    , resetPoll
+    , startPoll
+    , userLeft
+    , voteRecieved
+    )
 
-import Dict as Dict
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Socket.Events as SocketEvents
+import Vote as Vote
 
 
 
--- Connection handling ports
+-- EVENT TYPES --
+
+
+type OutEvent p
+    = EmptyOutEvent String
+    | OutEventWithPayload String (p -> Encode.Value) p
+
+
+type InEvent p msg
+    = EmptyInEvent String msg
+    | InEventWithPayload String (Decode.Decoder p) (IncomingMessage p -> msg)
+
+
+type alias IncomingMessage p =
+    Result String p
+
+
+
+-- OUT EVENTS --
+
+
+startPoll : OutEvent p
+startPoll =
+    EmptyOutEvent "start poll"
+
+
+endPoll : OutEvent p
+endPoll =
+    EmptyOutEvent "end poll"
+
+
+resetPoll : OutEvent p
+resetPoll =
+    EmptyOutEvent "reset poll"
+
+
+castVote : Vote.Vote -> OutEvent Vote.Vote
+castVote =
+    OutEventWithPayload "cast vote" Vote.encode
+
+
+
+-- IN EVENTS --
+
+
+managing : (Result String String -> msg) -> InEvent String msg
+managing =
+    InEventWithPayload "managing" Decode.string
+
+
+newUser : (Result String String -> msg) -> InEvent String msg
+newUser =
+    InEventWithPayload "new user" Decode.string
+
+
+userLeft : (Result String String -> msg) -> InEvent String msg
+userLeft =
+    InEventWithPayload "user left" Decode.string
+
+
+pollStarted : msg -> InEvent p msg
+pollStarted =
+    EmptyInEvent "start poll"
+
+
+pollEnded : msg -> InEvent p msg
+pollEnded =
+    EmptyInEvent "end poll"
+
+
+pollReset : msg -> InEvent p msg
+pollReset =
+    EmptyInEvent "reset poll"
+
+
+voteRecieved : (Result String Vote.Vote -> msg) -> InEvent Vote.Vote msg
+voteRecieved =
+    InEventWithPayload "cast vote" Vote.decoder
+
+
+
+-- PORTS --
 
 
 port connect : String -> Cmd msg
@@ -25,60 +123,48 @@ port send : String -> Cmd msg
 port sendJson : ( String, Encode.Value ) -> Cmd msg
 
 
-port incomingMessage : (SocketEvent -> msg) -> Sub msg
+port incomingMessage : (Event -> msg) -> Sub msg
 
 
-type alias SocketEvent =
+type alias Event =
     { name : String
-    , payload : Maybe Encode.Value
+    , payload : Encode.Value
     }
 
 
-type SocketEventHandler msg
-    = EmptyEvent msg
-    | EventWithPayload (Encode.Value -> msg)
+
+-- EVENT HANDLING --
 
 
-type alias Message payload =
-    Result String payload
+raiseEvent : OutEvent p -> Cmd msg
+raiseEvent event =
+    case event of
+        EmptyOutEvent name ->
+            send name
+
+        OutEventWithPayload name encoder payload ->
+            sendJson ( name, encoder payload )
 
 
-raiseEvent : SocketEvents.Event -> Cmd msg
-raiseEvent = SocketEvents.eventName >> send
+listen : msg -> InEvent p msg -> Sub msg
+listen noOp event =
+    case event of
+        EmptyInEvent name msg ->
+            incomingMessage
+                (\e ->
+                    if e.name == name then
+                        msg
 
+                    else
+                        noOp
+                )
 
-on : msg -> msg -> Dict.Dict String (SocketEventHandler msg) -> Sub msg
-on unhandledEvent socketErrorEvent eventHandlers =
-    let
-        getEventHandler : String -> Maybe (SocketEventHandler msg)
-        getEventHandler eventName =
-            Dict.get eventName eventHandlers
+        InEventWithPayload name decoder toMsg ->
+            incomingMessage
+                (\e ->
+                    if e.name == name then
+                        Decode.decodeValue decoder e.payload |> Result.mapError Decode.errorToString |> toMsg
 
-        handleEvent : Maybe (SocketEventHandler msg) -> SocketEvent -> msg
-        handleEvent handler event =
-            case ( handler, event.payload ) of
-                ( Nothing, _ ) ->
-                    unhandledEvent
-
-                ( Just (EmptyEvent message), _ ) ->
-                    message
-
-                ( Just (EventWithPayload _), Nothing ) ->
-                    socketErrorEvent
-
-                ( Just (EventWithPayload toMsg), Just payload ) ->
-                    toMsg payload
-    in
-    incomingMessage
-        (\event ->
-            let
-                handler =
-                    getEventHandler event.name
-            in
-            handleEvent handler event
-        )
-
-
-eventPayloadHandler : Decode.Decoder payload -> (Message payload -> msg) -> Encode.Value -> msg
-eventPayloadHandler decoder toMsg =
-    Decode.decodeValue decoder >> Result.mapError Decode.errorToString >> toMsg
+                    else
+                        noOp
+                )

@@ -5,11 +5,11 @@ import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
-import Url exposing (Protocol(..), Url)
-import Url.Parser exposing (parse, string)
-import Url.Builder as UrlBuilder exposing (crossOrigin)
-import UrlUtils exposing (baseUrl)
 import Socket exposing (connect)
+import Url exposing (Protocol(..), Url)
+import Url.Builder as UrlBuilder exposing (crossOrigin)
+import Url.Parser exposing (parse, string)
+import UrlUtils exposing (baseUrl)
 
 
 type Msg
@@ -85,10 +85,12 @@ viewPending currentUserName =
 
 
 buildConnectionString : String -> String -> Maybe String -> String
-buildConnectionString baseUrl userName maybeRoomId = crossOrigin baseUrl []
-    [ UrlBuilder.string "userName" userName
-    , UrlBuilder.string "roomId" (Maybe.withDefault "" maybeRoomId)
-    ]
+buildConnectionString baseUrl userName maybeRoomId =
+    crossOrigin baseUrl
+        []
+        [ UrlBuilder.string "userName" userName
+        , UrlBuilder.string "roomId" (Maybe.withDefault "" maybeRoomId)
+        ]
 
 
 onSubmit : Msg -> Html.Attribute Msg
