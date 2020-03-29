@@ -9,14 +9,8 @@ import UrlUtils exposing (baseUrl)
 import Vote as Vote
 
 
-type Msg
-    = UserJoined (Socket.IncomingMessage String)
-    | UserLeft (Socket.IncomingMessage String)
-    | StartPoll
-    | EndPoll
-    | ResetPoll
-    | RecievedVote (Socket.IncomingMessage Vote.Vote)
-    | NoOp
+
+-- MODEL --
 
 
 type alias Model =
@@ -28,29 +22,56 @@ type alias Model =
     }
 
 
+addParticipant : String -> Model -> Model
+addParticipant userName model =
+    { model | participants = userName :: model.participants }
+
+
+addVote : Vote.Vote -> Model -> Model
+addVote vote model =
+    { model | poll = Maybe.map (Vote.insertVote vote) model.poll }
+
+
+removeParticipant : String -> Model -> Model
+removeParticipant userName m =
+    { m | participants = List.filter ((/=) userName) m.participants }
+
+
+removeVote : String -> Model -> Model
+removeVote userName m =
+    { m | poll = Maybe.map (Vote.removeVote userName) m.poll }
+
+
 init : { userName : String, url : Url, roomId : String } -> ( Model, Cmd Msg )
 init { userName, url, roomId } =
     ( { userName = userName, url = url, roomId = roomId, participants = [], poll = Nothing }, Cmd.none )
+
+
+
+-- UPDATE --
+
+
+type Msg
+    = UserJoined (Socket.IncomingMessage String)
+    | UserLeft (Socket.IncomingMessage String)
+    | StartPoll
+    | EndPoll
+    | ResetPoll
+    | RecievedVote (Socket.IncomingMessage Vote.Vote)
+    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.poll ) of
         ( UserJoined (Ok userName), Nothing ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
+            ( addParticipant userName model, Cmd.none )
 
         ( UserJoined (Ok userName), Just _ ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, Socket.raiseEvent Socket.startPoll )
+            ( addParticipant userName model, Socket.raiseEvent Socket.startPoll )
 
         ( UserLeft (Ok userName), _ ) ->
-            let
-                participants =
-                    List.filter ((/=) userName) model.participants
-
-                poll =
-                    Maybe.map (Vote.removeVote userName) model.poll
-            in
-            ( { model | participants = participants, poll = poll }
+            ( model |> removeParticipant userName |> removeVote userName
             , Cmd.none
             )
 
@@ -63,11 +84,15 @@ update msg model =
         ( ResetPoll, Just _ ) ->
             ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent Socket.resetPoll )
 
-        ( RecievedVote (Ok vote), Just poll ) ->
-            ( { model | poll = Just (Vote.insertVote vote poll) }, Cmd.none )
+        ( RecievedVote (Ok vote), Just _ ) ->
+            ( addVote vote model, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
+
+
+
+-- SUBSCRIPTIONS --
 
 
 subscriptions : Model -> Sub Msg
@@ -77,6 +102,10 @@ subscriptions _ =
         , Socket.listen NoOp (Socket.userLeft UserLeft)
         , Socket.listen NoOp (Socket.voteRecieved RecievedVote)
         ]
+
+
+
+-- VIEW --
 
 
 view : Model -> Html Msg

@@ -5,7 +5,7 @@ import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
 import Socket exposing (connect)
-import Url exposing (Protocol(..), Url)
+import Url exposing (Url)
 import Url.Builder as UrlBuilder exposing (crossOrigin)
 import Url.Parser exposing (parse, string)
 import UrlUtils exposing (baseUrl)
@@ -42,7 +42,10 @@ update msg model =
             ( { model | userName = newUserName }, Cmd.none, False )
 
         ( FormSubmit, InputtingUserName ) ->
-            ( { model | formState = PendingConnection }, connect (buildConnectionString model.baseUrl model.userName model.roomId), False )
+            let
+                connectionString = buildConnectionString model.baseUrl model.userName model.roomId
+            in
+            ( { model | formState = PendingConnection }, connect connectionString, False )
 
         ( LoginSuccessful, PendingConnection ) ->
             ( model, Cmd.none, True )
