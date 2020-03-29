@@ -1,8 +1,9 @@
-port module Socket exposing (Message, SocketEvent, SocketEventHandler(..), connect, connected, disconnected, eventPayloadHandler, on, send, sendJson)
+port module Socket exposing (Message, SocketEvent, SocketEventHandler(..), connect, connected, disconnected, raiseEvent, eventPayloadHandler, on, sendJson)
 
 import Dict as Dict
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Socket.Events as SocketEvents
 
 
 
@@ -40,6 +41,10 @@ type SocketEventHandler msg
 
 type alias Message payload =
     Result String payload
+
+
+raiseEvent : SocketEvents.Event -> Cmd msg
+raiseEvent = SocketEvents.eventName >> send
 
 
 on : msg -> msg -> Dict.Dict String (SocketEventHandler msg) -> Sub msg

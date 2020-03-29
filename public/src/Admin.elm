@@ -7,6 +7,7 @@ import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Socket as Socket
+import Socket.Events as SocketEvents
 import Url exposing (Protocol(..), Url)
 import UrlUtils exposing (baseUrl)
 import Vote as Vote
@@ -47,7 +48,7 @@ update msg model =
             ( { model | participants = model.participants ++ [ userName ] }, Cmd.none )
 
         ( UserJoined (Ok userName), Just _ ) ->
-            ( { model | participants = model.participants ++ [ userName ] }, Socket.send "start poll" )
+            ( { model | participants = model.participants ++ [ userName ] }, Socket.raiseEvent SocketEvents.startPoll )
 
         ( UserLeft (Ok userName), _ ) ->
             let
@@ -62,13 +63,13 @@ update msg model =
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just [] }, Socket.send "start poll" )
+            ( { model | poll = Just [] }, Socket.raiseEvent SocketEvents.startPoll )
 
         ( EndPoll, Just _ ) ->
-            ( { model | poll = Nothing }, Socket.send "end poll" )
+            ( { model | poll = Nothing }, Socket.raiseEvent SocketEvents.endPoll )
 
         ( ResetPoll, Just _ ) ->
-            ( { model | poll = Just [] }, Socket.send "reset poll" )
+            ( { model | poll = Just [] }, Socket.raiseEvent SocketEvents.resetPoll )
 
         ( RecievedVote (Ok vote), Just votes ) ->
             ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
