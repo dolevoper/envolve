@@ -1,4 +1,4 @@
-module Guest exposing (Model, Msg(..), init, subscriptions, update, view)
+module Guest exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Html exposing (Html, button, div, text)

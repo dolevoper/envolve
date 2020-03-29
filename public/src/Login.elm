@@ -1,4 +1,4 @@
-module Login exposing (FormState(..), Model, Msg(..), init, subscriptions, update, view)
+module Login exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Html exposing (Html, button, div, form, input, label, text)
@@ -15,6 +15,7 @@ import UrlUtils exposing (baseUrl)
 type Msg
     = UserNameEntered String
     | FormSubmit
+    | LoginSuccessful
 
 
 type alias Model =
@@ -35,22 +36,25 @@ init url =
     ( { baseUrl = baseUrl url, roomId = parse string url, userName = "", formState = InputtingUserName }, Cmd.none )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Bool )
 update msg model =
     case ( msg, model.formState ) of
         ( UserNameEntered newUserName, InputtingUserName ) ->
-            ( { model | userName = newUserName }, Cmd.none )
+            ( { model | userName = newUserName }, Cmd.none, False )
 
         ( FormSubmit, InputtingUserName ) ->
-            ( { model | formState = PendingConnection }, connect (buildConnectionString model.baseUrl model.userName model.roomId) )
+            ( { model | formState = PendingConnection }, connect (buildConnectionString model.baseUrl model.userName model.roomId), False )
+
+        ( LoginSuccessful, PendingConnection ) ->
+            ( model, Cmd.none, True )
 
         ( _, _ ) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, False )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Socket.connected (always LoginSuccessful)
 
 
 view : Model -> Document Msg

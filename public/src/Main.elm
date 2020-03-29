@@ -7,7 +7,7 @@ import Guest as Guest
 import Html as Html
 import Login as Login
 import Socket as Socket
-import Url exposing (Protocol(..), Url)
+import Url exposing (Url)
 import UrlUtils exposing (baseUrl)
 
 
@@ -26,7 +26,6 @@ main =
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
-    | Connected
     | Managing (Socket.IncomingMessage String)
     | Disconnected
     | LoginMsg Login.Msg
@@ -64,9 +63,6 @@ initPage initiator fromPageModel fromPageMsg flags =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        updateLoginPage =
-            updatePage Login.update LoginMsg Login
-
         updateAdminPage =
             updatePage Admin.update AdminMsg Admin
 
@@ -80,9 +76,6 @@ update msg model =
             initPage Guest.init Guest GuestMsg
     in
     case ( msg, model.page ) of
-        ( Connected, Login { userName } ) ->
-            toAppState model.url (initGuestPage userName)
-
         ( Managing (Ok roomId), Guest { userName } ) ->
             toAppState model.url (initAdminPage { userName = userName, url = model.url, roomId = roomId })
 
@@ -90,7 +83,14 @@ update msg model =
             ( model, Nav.load (baseUrl model.url) )
 
         ( LoginMsg loginMsg, Login login ) ->
-            toAppState model.url (updateLoginPage loginMsg login)
+            let
+                ( newLoginModel, cmd, loginSuccessful ) =
+                    Login.update loginMsg login
+            in
+            if loginSuccessful then
+                toAppState model.url (initGuestPage newLoginModel.userName)
+            else
+                toAppState model.url ( Login newLoginModel, Cmd.map LoginMsg cmd )
 
         ( AdminMsg adminMsg, Admin admin ) ->
             toAppState model.url (updateAdminPage adminMsg admin)
@@ -119,10 +119,7 @@ subscriptions model =
     in
     case model.page of
         Login login ->
-            Sub.batch
-                [ Sub.map LoginMsg (Login.subscriptions login)
-                , Socket.connected (always Connected)
-                ]
+            Sub.map LoginMsg (Login.subscriptions login)
 
         Admin admin ->
             Sub.batch
