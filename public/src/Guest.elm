@@ -1,6 +1,5 @@
 module Guest exposing (Model, Msg, init, subscriptions, update, view)
 
-import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
 import Socket as Socket
@@ -45,7 +44,8 @@ update msg model =
 
         ( VoteClicked value, Just _ ) ->
             let
-                vote = Vote.createVote model.userName value
+                vote =
+                    Vote.createVote model.userName value
             in
             ( { model | poll = Just (Voted value) }, Socket.raiseEvent (Socket.castVote vote) )
 
@@ -62,16 +62,12 @@ subscriptions _ =
         ]
 
 
-view : Model -> Document Msg
+view : Model -> Html Msg
 view model =
-    { title = "Envolve - Home"
-    , body =
-        [ div []
-            [ div [] [ text ("Hello " ++ model.userName) ]
-            , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection model.poll)
-            ]
+    div []
+        [ div [] [ text ("Hello " ++ model.userName) ]
+        , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection model.poll)
         ]
-    }
 
 
 viewGuestPollSection : GuestPollData -> Html Msg

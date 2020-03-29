@@ -1,6 +1,5 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
-import Browser exposing (Document)
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
@@ -27,7 +26,6 @@ type alias Model =
     , participants : List String
     , poll : Maybe Vote.Poll
     }
-
 
 
 init : { userName : String, url : Url, roomId : String } -> ( Model, Cmd Msg )
@@ -81,25 +79,21 @@ subscriptions _ =
         ]
 
 
-view : Model -> Document Msg
+view : Model -> Html Msg
 view model =
     let
         inviteLink =
             buildInviteLink model.url model.roomId
     in
-    { title = "Envolve - Home"
-    , body =
-        [ div []
-            [ div [] [ text ("Hello " ++ model.userName) ]
-            , div []
-                [ text "Invite people to join using this link: "
-                , externalLink inviteLink inviteLink
-                ]
-            , viewParticipants model.participants
-            , viewAdminPollSection model.poll
+    div []
+        [ div [] [ text ("Hello " ++ model.userName) ]
+        , div []
+            [ text "Invite people to join using this link: "
+            , externalLink inviteLink inviteLink
             ]
+        , viewParticipants model.participants
+        , viewAdminPollSection model.poll
         ]
-    }
 
 
 viewParticipants : List String -> Html Msg
@@ -124,9 +118,11 @@ viewAdminPollSection maybePoll =
 
         Just poll ->
             let
-                yesVotes = Vote.yesVotes poll
+                yesVotes =
+                    Vote.yesVotes poll
 
-                noVotes = Vote.noVotes poll
+                noVotes =
+                    Vote.noVotes poll
             in
             div []
                 [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)

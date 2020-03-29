@@ -89,6 +89,7 @@ update msg model =
             in
             if loginSuccessful then
                 toAppState model.url (initGuestPage newLoginModel.userName)
+
             else
                 toAppState model.url ( Login newLoginModel, Cmd.map LoginMsg cmd )
 
@@ -158,13 +159,9 @@ view model =
             viewGuestPage guest
 
 
-viewPage : (pageModel -> Document pageMsg) -> (pageMsg -> Msg) -> pageModel -> Document Msg
+viewPage : (pageModel -> Html.Html pageMsg) -> (pageMsg -> Msg) -> pageModel -> Document Msg
 viewPage viewer fromPageMsg model =
-    let
-        { title, body } =
-            viewer model
-    in
-    { title = title, body = List.map (Html.map fromPageMsg) body }
+    { title = "Envolve", body = [ Html.map fromPageMsg (viewer model) ] }
 
 
 toAppState : Url -> ( Page, Cmd Msg ) -> ( Model, Cmd Msg )

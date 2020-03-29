@@ -1,6 +1,5 @@
 module Login exposing (Model, Msg, init, subscriptions, update, view)
 
-import Browser exposing (Document)
 import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
@@ -57,17 +56,14 @@ subscriptions _ =
     Socket.connected (always LoginSuccessful)
 
 
-view : Model -> Document Msg
+view : Model -> Html Msg
 view model =
-    { title = "Envolve - Login"
-    , body =
-        case model.formState of
-            InputtingUserName ->
-                [ viewInput model.userName ]
+    case model.formState of
+        InputtingUserName ->
+            viewInput model.userName
 
-            PendingConnection ->
-                [ viewPending model.userName ]
-    }
+        PendingConnection ->
+            viewPending model.userName
 
 
 viewInput : String -> Html Msg
