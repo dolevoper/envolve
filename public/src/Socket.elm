@@ -62,7 +62,7 @@ resetPoll =
 
 castVote : Vote.Vote -> OutEvent Vote.Vote
 castVote =
-    OutEventWithPayload "cast vote" Vote.encode
+    OutEventWithPayload "cast vote" Vote.encodeVote
 
 
 
@@ -101,7 +101,7 @@ pollReset =
 
 voteRecieved : (Result String Vote.Vote -> msg) -> InEvent Vote.Vote msg
 voteRecieved =
-    InEventWithPayload "cast vote" Vote.decoder
+    InEventWithPayload "cast vote" Vote.vote
 
 
 

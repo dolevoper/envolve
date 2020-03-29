@@ -25,12 +25,9 @@ type alias Model =
     , url : Url
     , roomId : String
     , participants : List String
-    , poll : Maybe AdminPollData
+    , poll : Maybe Vote.Poll
     }
 
-
-type alias AdminPollData =
-    List ( String, Bool )
 
 
 init : { userName : String, url : Url, roomId : String } -> ( Model, Cmd Msg )
@@ -53,23 +50,23 @@ update msg model =
                     List.filter ((/=) userName) model.participants
 
                 poll =
-                    Maybe.map (List.filter (Tuple.first >> (/=) userName)) model.poll
+                    Maybe.map (Vote.removeVote userName) model.poll
             in
             ( { model | participants = participants, poll = poll }
             , Cmd.none
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just [] }, Socket.raiseEvent Socket.startPoll )
+            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent Socket.startPoll )
 
         ( EndPoll, Just _ ) ->
             ( { model | poll = Nothing }, Socket.raiseEvent Socket.endPoll )
 
         ( ResetPoll, Just _ ) ->
-            ( { model | poll = Just [] }, Socket.raiseEvent Socket.resetPoll )
+            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent Socket.resetPoll )
 
-        ( RecievedVote (Ok vote), Just votes ) ->
-            ( { model | poll = Just (votes ++ [ vote ]) }, Cmd.none )
+        ( RecievedVote (Ok vote), Just poll ) ->
+            ( { model | poll = Just (Vote.insertVote vote poll) }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -118,20 +115,18 @@ viewParticipant userName =
     li [] [ text userName ]
 
 
-viewAdminPollSection : Maybe AdminPollData -> Html Msg
-viewAdminPollSection adminPollData =
-    case adminPollData of
+viewAdminPollSection : Maybe Vote.Poll -> Html Msg
+viewAdminPollSection maybePoll =
+    case maybePoll of
         Nothing ->
             div []
                 [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
 
-        Just votes ->
+        Just poll ->
             let
-                yesVotes =
-                    List.length (List.filter Tuple.second votes)
+                yesVotes = Vote.yesVotes poll
 
-                noVotes =
-                    List.length votes - yesVotes
+                noVotes = Vote.noVotes poll
             in
             div []
                 [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)

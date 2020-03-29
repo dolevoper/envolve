@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
 import Socket as Socket
+import Vote as Vote
 
 
 type Msg
@@ -42,12 +43,11 @@ update msg model =
         ( PollReset, Just _ ) ->
             ( { model | poll = Just NotVoted }, Cmd.none )
 
-        ( VoteClicked vote, Just _ ) ->
+        ( VoteClicked value, Just _ ) ->
             let
-                voteJson =
-                    ( model.userName, vote )
+                vote = Vote.createVote model.userName value
             in
-            ( { model | poll = Just (Voted vote) }, Socket.raiseEvent (Socket.castVote voteJson) )
+            ( { model | poll = Just (Voted value) }, Socket.raiseEvent (Socket.castVote vote) )
 
         _ ->
             ( model, Cmd.none )
