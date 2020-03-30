@@ -7,6 +7,7 @@ import Guest as Guest
 import Html as Html
 import Login as Login
 import Socket as Socket
+import Socket.Events exposing (managing)
 import Url exposing (Url)
 import UrlUtils exposing (baseUrl)
 
@@ -132,7 +133,7 @@ subscriptions model =
             Sub.batch
                 [ Sub.map GuestMsg (Guest.subscriptions guest)
                 , disconnectedSubscription
-                , Socket.listen NoOp (Socket.managing Managing)
+                , Socket.listen NoOp (managing.inBound Managing)
                 ]
 
 

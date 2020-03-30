@@ -1,26 +1,18 @@
 port module Socket exposing
-    ( IncomingMessage
-    , castVote
+    ( EmptyEvent
+    , EventWithPayload
+    , IncomingMessage
     , connect
     , connected
     , disconnected
-    , endPoll
+    , emptyEvent
+    , eventWithPayload
     , listen
-    , managing
-    , newUser
-    , pollEnded
-    , pollReset
-    , pollStarted
     , raiseEvent
-    , resetPoll
-    , startPoll
-    , userLeft
-    , voteRecieved
     )
 
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Vote as Vote
 
 
 
@@ -41,67 +33,26 @@ type alias IncomingMessage p =
     Result String p
 
 
-
--- OUT EVENTS --
-
-
-startPoll : OutEvent p
-startPoll =
-    EmptyOutEvent "start poll"
+type alias EmptyEvent p msg =
+    { outBound : OutEvent p
+    , inBound : msg -> InEvent p msg
+    }
 
 
-endPoll : OutEvent p
-endPoll =
-    EmptyOutEvent "end poll"
+type alias EventWithPayload p msg =
+    { outBound : p -> OutEvent p
+    , inBound : (IncomingMessage p -> msg) -> InEvent p msg
+    }
 
 
-resetPoll : OutEvent p
-resetPoll =
-    EmptyOutEvent "reset poll"
+emptyEvent : String -> EmptyEvent p msg
+emptyEvent name =
+    { outBound = EmptyOutEvent name, inBound = EmptyInEvent name }
 
 
-castVote : Vote.Vote -> OutEvent Vote.Vote
-castVote =
-    OutEventWithPayload "cast vote" Vote.encodeVote
-
-
-
--- IN EVENTS --
-
-
-managing : (Result String String -> msg) -> InEvent String msg
-managing =
-    InEventWithPayload "managing" Decode.string
-
-
-newUser : (Result String String -> msg) -> InEvent String msg
-newUser =
-    InEventWithPayload "new user" Decode.string
-
-
-userLeft : (Result String String -> msg) -> InEvent String msg
-userLeft =
-    InEventWithPayload "user left" Decode.string
-
-
-pollStarted : msg -> InEvent p msg
-pollStarted =
-    EmptyInEvent "start poll"
-
-
-pollEnded : msg -> InEvent p msg
-pollEnded =
-    EmptyInEvent "end poll"
-
-
-pollReset : msg -> InEvent p msg
-pollReset =
-    EmptyInEvent "reset poll"
-
-
-voteRecieved : (Result String Vote.Vote -> msg) -> InEvent Vote.Vote msg
-voteRecieved =
-    InEventWithPayload "cast vote" Vote.vote
+eventWithPayload : String -> (p -> Encode.Value) -> Decode.Decoder p -> EventWithPayload p msg
+eventWithPayload name encoder decoder =
+    { outBound = OutEventWithPayload name encoder, inBound = InEventWithPayload name decoder }
 
 
 

@@ -3,6 +3,7 @@ module Guest exposing (Model, Msg, init, subscriptions, update, view)
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
 import Socket as Socket
+import Socket.Events exposing (startPoll, endPoll, resetPoll, castVote)
 import Vote as Vote
 
 
@@ -47,7 +48,7 @@ update msg model =
                 vote =
                     Vote.createVote model.userName value
             in
-            ( { model | poll = Just (Voted value) }, Socket.raiseEvent (Socket.castVote vote) )
+            ( { model | poll = Just (Voted value) }, Socket.raiseEvent (castVote.outBound vote) )
 
         _ ->
             ( model, Cmd.none )
@@ -56,9 +57,9 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ Socket.listen NoOp (Socket.pollStarted PollStarting)
-        , Socket.listen NoOp (Socket.pollEnded PollEnded)
-        , Socket.listen NoOp (Socket.pollReset PollReset)
+        [ Socket.listen NoOp (startPoll.inBound PollStarting)
+        , Socket.listen NoOp (endPoll.inBound PollEnded)
+        , Socket.listen NoOp (resetPoll.inBound PollReset)
         ]
 
 

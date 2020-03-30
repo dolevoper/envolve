@@ -4,7 +4,8 @@ import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (href, rel, target)
 import Html.Events exposing (onClick)
 import Socket as Socket
-import Url exposing (Protocol(..), Url)
+import Socket.Events exposing (startPoll, endPoll, resetPoll, newUser, userLeft, castVote)
+import Url exposing (Url)
 import UrlUtils exposing (baseUrl)
 import Vote as Vote
 
@@ -68,7 +69,7 @@ update msg model =
             ( addParticipant userName model, Cmd.none )
 
         ( UserJoined (Ok userName), Just _ ) ->
-            ( addParticipant userName model, Socket.raiseEvent Socket.startPoll )
+            ( addParticipant userName model, Socket.raiseEvent startPoll.outBound )
 
         ( UserLeft (Ok userName), _ ) ->
             ( model |> removeParticipant userName |> removeVote userName
@@ -76,13 +77,13 @@ update msg model =
             )
 
         ( StartPoll, Nothing ) ->
-            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent Socket.startPoll )
+            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent startPoll.outBound )
 
         ( EndPoll, Just _ ) ->
-            ( { model | poll = Nothing }, Socket.raiseEvent Socket.endPoll )
+            ( { model | poll = Nothing }, Socket.raiseEvent endPoll.outBound )
 
         ( ResetPoll, Just _ ) ->
-            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent Socket.resetPoll )
+            ( { model | poll = Just Vote.emptyPoll }, Socket.raiseEvent resetPoll.outBound )
 
         ( RecievedVote (Ok vote), Just _ ) ->
             ( addVote vote model, Cmd.none )
@@ -98,9 +99,9 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ Socket.listen NoOp (Socket.newUser UserJoined)
-        , Socket.listen NoOp (Socket.userLeft UserLeft)
-        , Socket.listen NoOp (Socket.voteRecieved RecievedVote)
+        [ Socket.listen NoOp (newUser.inBound UserJoined)
+        , Socket.listen NoOp (userLeft.inBound UserLeft)
+        , Socket.listen NoOp (castVote.inBound RecievedVote)
         ]
 
 
