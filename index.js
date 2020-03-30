@@ -46,6 +46,8 @@ io.use((socket, next) => {
 
     if (!roomId) {
         roomId = createRoom(socket.id);
+    } else if (!roomIds.includes(roomId)) {
+        return next(new Error(`room ${roomId} does not exist`));
     }
 
     socket.roomId = roomId;

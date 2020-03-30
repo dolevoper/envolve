@@ -4,11 +4,10 @@ import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
-import Socket exposing (connect)
+import Socket exposing (openConnection)
+import Socket.ConnectionString as Conn
 import Url exposing (Url)
-import Url.Builder as UrlBuilder exposing (crossOrigin)
 import Url.Parser exposing (parse, string)
-import UrlUtils exposing (baseUrl)
 
 
 type Msg
@@ -18,7 +17,7 @@ type Msg
 
 
 type alias Model =
-    { baseUrl : String
+    { url : Url
     , roomId : Maybe String
     , userName : String
     , formState : FormState
@@ -32,7 +31,7 @@ type FormState
 
 init : Url -> ( Model, Cmd Msg )
 init url =
-    ( { baseUrl = baseUrl url, roomId = parse string url, userName = "", formState = InputtingUserName }, Cmd.none )
+    ( { url = url, roomId = parse string url, userName = "", formState = InputtingUserName }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, Bool )
@@ -43,9 +42,10 @@ update msg model =
 
         ( FormSubmit, InputtingUserName ) ->
             let
-                connectionString = buildConnectionString model.baseUrl model.userName model.roomId
+                connectionString =
+                    Conn.fromUrl model.url model.userName model.roomId
             in
-            ( { model | formState = PendingConnection }, connect connectionString, False )
+            ( { model | formState = PendingConnection }, openConnection connectionString, False )
 
         ( LoginSuccessful, PendingConnection ) ->
             ( model, Cmd.none, True )
@@ -84,15 +84,6 @@ viewPending currentUserName =
         [ label [ for "name-input" ] [ text "Please enter your name: " ]
         , input [ id "name-input", value currentUserName, disabled True ] []
         , button [ disabled True ] [ text "Enter" ]
-        ]
-
-
-buildConnectionString : String -> String -> Maybe String -> String
-buildConnectionString baseUrl userName maybeRoomId =
-    crossOrigin baseUrl
-        []
-        [ UrlBuilder.string "userName" userName
-        , UrlBuilder.string "roomId" (Maybe.withDefault "" maybeRoomId)
         ]
 
 

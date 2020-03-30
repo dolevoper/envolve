@@ -18,6 +18,8 @@
 
 			socket.on('connect', () => app.ports.connected.send(null));
 
+			socket.on('error', err => app.ports.socketError.send(err));
+
 			socket.on('elm socket event', event => app.ports.incomingMessage.send(event));
 
 			app.ports.send.subscribe(function (name) {

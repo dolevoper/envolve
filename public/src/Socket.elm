@@ -2,17 +2,19 @@ port module Socket exposing
     ( EmptyEvent
     , EventWithPayload
     , IncomingMessage
-    , connect
     , connected
     , disconnected
     , emptyEvent
     , eventWithPayload
     , listen
+    , openConnection
     , raiseEvent
+    , socketError
     )
 
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Socket.ConnectionString as Conn
 
 
 
@@ -56,7 +58,7 @@ eventWithPayload name encoder decoder =
 
 
 
--- PORTS --
+-- CONNECTION MANAGEMENT --
 
 
 port connect : String -> Cmd msg
@@ -66,6 +68,18 @@ port connected : (() -> msg) -> Sub msg
 
 
 port disconnected : (() -> msg) -> Sub msg
+
+
+port socketError : (String -> msg) -> Sub msg
+
+
+openConnection : Conn.ConnectionString -> Cmd msg
+openConnection =
+    Conn.toString >> connect
+
+
+
+-- EVENT HANDLING --
 
 
 port send : String -> Cmd msg
@@ -81,10 +95,6 @@ type alias Event =
     { name : String
     , payload : Encode.Value
     }
-
-
-
--- EVENT HANDLING --
 
 
 raiseEvent : OutEvent p -> Cmd msg

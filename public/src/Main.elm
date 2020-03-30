@@ -32,13 +32,13 @@ type Msg
     | LoginMsg Login.Msg
     | AdminMsg Admin.Msg
     | GuestMsg Guest.Msg
+    | Error String
     | NoOp
 
 
-type alias Model =
-    { url : Url
-    , page : Page
-    }
+type Model
+    = AppError String
+    | AppOk Url Page
 
 
 type Page
@@ -63,45 +63,53 @@ initPage initiator fromPageModel fromPageMsg flags =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        updateAdminPage =
-            updatePage Admin.update AdminMsg Admin
-
-        updateGuestPage =
-            updatePage Guest.update GuestMsg Guest
-
-        initAdminPage =
-            initPage Admin.init Admin AdminMsg
-
-        initGuestPage =
-            initPage Guest.init Guest GuestMsg
-    in
-    case ( msg, model.page ) of
-        ( Managing (Ok roomId), Guest { userName } ) ->
-            toAppState model.url (initAdminPage { userName = userName, url = model.url, roomId = roomId })
-
-        ( Disconnected, _ ) ->
-            ( model, Nav.load (baseUrl model.url) )
-
-        ( LoginMsg loginMsg, Login login ) ->
-            let
-                ( newLoginModel, cmd, loginSuccessful ) =
-                    Login.update loginMsg login
-            in
-            if loginSuccessful then
-                toAppState model.url (initGuestPage newLoginModel.userName)
-
-            else
-                toAppState model.url ( Login newLoginModel, Cmd.map LoginMsg cmd )
-
-        ( AdminMsg adminMsg, Admin admin ) ->
-            toAppState model.url (updateAdminPage adminMsg admin)
-
-        ( GuestMsg guestMsg, Guest guest ) ->
-            toAppState model.url (updateGuestPage guestMsg guest)
-
-        ( _, _ ) ->
+    case model of
+        AppError _ ->
             ( model, Cmd.none )
+
+        AppOk url page ->
+            let
+                updateAdminPage =
+                    updatePage Admin.update AdminMsg Admin
+
+                updateGuestPage =
+                    updatePage Guest.update GuestMsg Guest
+
+                initAdminPage =
+                    initPage Admin.init Admin AdminMsg
+
+                initGuestPage =
+                    initPage Guest.init Guest GuestMsg
+            in
+            case ( msg, page ) of
+                ( Managing (Ok roomId), Guest { userName } ) ->
+                    toAppState url (initAdminPage { userName = userName, url = url, roomId = roomId })
+
+                ( Disconnected, _ ) ->
+                    ( model, Nav.load (baseUrl url) )
+
+                ( Error err, _ ) ->
+                    ( AppError err, Cmd.none )
+
+                ( LoginMsg loginMsg, Login login ) ->
+                    let
+                        ( newLoginModel, cmd, loginSuccessful ) =
+                            Login.update loginMsg login
+                    in
+                    if loginSuccessful then
+                        toAppState url (initGuestPage newLoginModel.userName)
+
+                    else
+                        toAppState url ( Login newLoginModel, Cmd.map LoginMsg cmd )
+
+                ( AdminMsg adminMsg, Admin admin ) ->
+                    toAppState url (updateAdminPage adminMsg admin)
+
+                ( GuestMsg guestMsg, Guest guest ) ->
+                    toAppState url (updateGuestPage guestMsg guest)
+
+                ( _, _ ) ->
+                    ( model, Cmd.none )
 
 
 updatePage : (pageMsg -> pageModel -> ( pageModel, Cmd pageMsg )) -> (pageMsg -> Msg) -> (pageModel -> Page) -> pageMsg -> pageModel -> ( Page, Cmd Msg )
@@ -115,49 +123,67 @@ updatePage updater fromPageMsg fromPageModel msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    let
-        disconnectedSubscription =
-            Socket.disconnected (always Disconnected)
-    in
-    case model.page of
-        Login login ->
-            Sub.map LoginMsg (Login.subscriptions login)
+    case model of
+        AppError _ ->
+            Sub.none
 
-        Admin admin ->
-            Sub.batch
-                [ Sub.map AdminMsg (Admin.subscriptions admin)
-                , disconnectedSubscription
-                ]
+        AppOk _ page ->
+            let
+                disconnectedSubscription =
+                    Socket.disconnected (always Disconnected)
 
-        Guest guest ->
-            Sub.batch
-                [ Sub.map GuestMsg (Guest.subscriptions guest)
-                , disconnectedSubscription
-                , Socket.listen NoOp (managing.inBound Managing)
-                ]
+                errorSubscription =
+                    Socket.socketError Error
+            in
+            case page of
+                Login login ->
+                    Sub.batch
+                        [ Sub.map LoginMsg (Login.subscriptions login)
+                        , errorSubscription
+                        ]
+
+                Admin admin ->
+                    Sub.batch
+                        [ Sub.map AdminMsg (Admin.subscriptions admin)
+                        , disconnectedSubscription
+                        , errorSubscription
+                        ]
+
+                Guest guest ->
+                    Sub.batch
+                        [ Sub.map GuestMsg (Guest.subscriptions guest)
+                        , Socket.listen NoOp (managing.inBound Managing)
+                        , disconnectedSubscription
+                        , errorSubscription
+                        ]
 
 
 view : Model -> Document Msg
 view model =
-    let
-        viewLoginPage =
-            viewPage Login.view LoginMsg
+    case model of
+        AppError err ->
+            { title = "Envolve", body = [ Html.div [] [ Html.text err ] ] }
 
-        viewAdminPage =
-            viewPage Admin.view AdminMsg
+        AppOk _ page ->
+            let
+                viewLoginPage =
+                    viewPage Login.view LoginMsg
 
-        viewGuestPage =
-            viewPage Guest.view GuestMsg
-    in
-    case model.page of
-        Login login ->
-            viewLoginPage login
+                viewAdminPage =
+                    viewPage Admin.view AdminMsg
 
-        Admin admin ->
-            viewAdminPage admin
+                viewGuestPage =
+                    viewPage Guest.view GuestMsg
+            in
+            case page of
+                Login login ->
+                    viewLoginPage login
 
-        Guest guest ->
-            viewGuestPage guest
+                Admin admin ->
+                    viewAdminPage admin
+
+                Guest guest ->
+                    viewGuestPage guest
 
 
 viewPage : (pageModel -> Html.Html pageMsg) -> (pageMsg -> Msg) -> pageModel -> Document Msg
@@ -167,4 +193,4 @@ viewPage viewer fromPageMsg model =
 
 toAppState : Url -> ( Page, Cmd Msg ) -> ( Model, Cmd Msg )
 toAppState url pageState =
-    Tuple.mapFirst (Model url) pageState
+    Tuple.mapFirst (AppOk url) pageState
