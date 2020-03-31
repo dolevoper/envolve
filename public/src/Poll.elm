@@ -1,8 +1,8 @@
-module Vote exposing (Poll, Vote, createVote, emptyPoll, encodeVote, insertVote, noVotes, removeVote, vote, yesVotes)
+module Poll exposing (Poll, Vote, createVote, emptyPoll, encodeVote, insertVote, noVotes, removeVote, vote, yesVotes)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Set as Set
+import Set as Set exposing (Set)
 
 
 
@@ -38,7 +38,7 @@ vote =
 
 
 type Poll
-    = Poll (Set.Set String) (Set.Set String)
+    = Poll (Set String) (Set String)
 
 
 emptyPoll : Poll

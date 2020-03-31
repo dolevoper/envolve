@@ -2,8 +2,9 @@ module Socket.Events exposing (castVote, endPoll, managing, newUser, resetPoll, 
 
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Poll as Poll exposing (Vote)
+import RoomId as RoomId exposing (RoomId)
 import Socket exposing (EmptyEvent, EventWithPayload, emptyEvent, eventWithPayload)
-import Vote as Vote
 
 
 startPoll : EmptyEvent p msg
@@ -21,14 +22,14 @@ resetPoll =
     emptyEvent "reset poll"
 
 
-castVote : EventWithPayload Vote.Vote msg
+castVote : EventWithPayload Vote msg
 castVote =
-    eventWithPayload "cast vote" Vote.encodeVote Vote.vote
+    eventWithPayload "cast vote" Poll.encodeVote Poll.vote
 
 
-managing : EventWithPayload String msg
+managing : EventWithPayload RoomId msg
 managing =
-    eventWithPayload "managing" Encode.string Decode.string
+    eventWithPayload "managing" RoomId.encode RoomId.decoder
 
 
 newUser : EventWithPayload String msg

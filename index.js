@@ -1,6 +1,7 @@
 const http = require('http');
 const path = require('path');
 const express = require('express');
+const { urlencoded, json } = require('body-parser');
 const socket = require('socket.io');
 const { v4: uuid } = require('uuid');
 
@@ -29,17 +30,23 @@ const closeRoom = roomId => {
 
 const elmSocketEvent = (name, payload = null) => ['elm socket event', { name, payload }];
 
-app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(urlencoded({ extended: true }));
+app.use(json());
 
-app.get('/:roomId', function (req, res) {
-    const { roomId } = req.params;
-
-    if (!roomIds.includes(roomId)) {
-        return res.send(`Room ${roomId} does not exists.`);
-    }
-
+app.get('*', (_, res) => {
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
+
+// app.get('/:roomId', function (req, res) {
+//     const { roomId } = req.params;
+
+//     if (!roomIds.includes(roomId)) {
+//         return res.send(`Room ${roomId} does not exists.`);
+//     }
+
+//     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+// });
 
 io.use((socket, next) => {
     let { roomId } = socket.handshake.query;

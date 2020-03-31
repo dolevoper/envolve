@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "build": "cd public&& elm make src/Main.elm --optimize --output=main.js"
+    "build": "cd public&& elm make src/Main.elm --optimize --output=main.js",
+    "build-dev": "cd public&& elm make src/Main.elm --output=main.js"
   },
   "engines": {
     "node": "10.x"

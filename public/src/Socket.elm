@@ -1,7 +1,6 @@
 port module Socket exposing
     ( EmptyEvent
     , EventWithPayload
-    , IncomingMessage
     , connected
     , disconnected
     , emptyEvent
@@ -28,11 +27,7 @@ type OutEvent p
 
 type InEvent p msg
     = EmptyInEvent String msg
-    | InEventWithPayload String (Decode.Decoder p) (IncomingMessage p -> msg)
-
-
-type alias IncomingMessage p =
-    Result String p
+    | InEventWithPayload String (Decode.Decoder p) (String -> msg) (p -> msg)
 
 
 type alias EmptyEvent p msg =
@@ -43,7 +38,7 @@ type alias EmptyEvent p msg =
 
 type alias EventWithPayload p msg =
     { outBound : p -> OutEvent p
-    , inBound : (IncomingMessage p -> msg) -> InEvent p msg
+    , inBound : (String -> msg) -> (p -> msg) -> InEvent p msg
     }
 
 
@@ -120,11 +115,20 @@ listen noOp event =
                         noOp
                 )
 
-        InEventWithPayload name decoder toMsg ->
+        InEventWithPayload name decoder toErrorMsg toSuccessMsg ->
             incomingMessage
                 (\e ->
                     if e.name == name then
-                        Decode.decodeValue decoder e.payload |> Result.mapError Decode.errorToString |> toMsg
+                        let
+                            result =
+                                Decode.decodeValue decoder e.payload |> Result.mapError Decode.errorToString
+                        in
+                        case result of
+                            Err err ->
+                                toErrorMsg err
+
+                            Ok payload ->
+                                toSuccessMsg payload
 
                     else
                         noOp

@@ -3,18 +3,17 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Envolve</title>
 </head>
 <body>
-	<script src="socket.io/socket.io.js"></script>
-	<script src="main.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="/main.js"></script>
 	<script>
 		const app = Elm.Main.init();
 
 		app.ports.connect.subscribe(function (connectionString) {
 			const socket = io(connectionString);
 
-			socket.on('disconnect', () => app.ports.disconnected.send(null));
+			// socket.on('disconnect', () => app.ports.disconnected.send(null));
 
 			socket.on('connect', () => app.ports.connected.send(null));
 

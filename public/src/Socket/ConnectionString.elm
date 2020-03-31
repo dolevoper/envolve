@@ -1,23 +1,36 @@
 module Socket.ConnectionString exposing (ConnectionString, fromUrl, toString)
 
+import RoomId as RoomId exposing (RoomId)
+import Route as Route
 import Url exposing (Url)
 import Url.Builder as Builder
 import UrlUtils exposing (baseUrl)
 
 
+type alias BaseUrl =
+    String
+
+
+type alias UserName =
+    String
+
+
 type ConnectionString
-    = ConnectionString String String (Maybe String)
+    = ConnectionString BaseUrl UserName (Maybe RoomId)
 
 
-fromUrl : Url -> String -> Maybe String -> ConnectionString
-fromUrl url userName roomId =
-    ConnectionString (baseUrl url) userName roomId
+fromUrl : Url -> UserName -> ConnectionString
+fromUrl url userName =
+    ConnectionString (baseUrl url) userName (url |> Route.fromUrl |> Route.roomId)
 
 
 toString : ConnectionString -> String
-toString (ConnectionString baseUrl userName maybeRoomId) =
+toString (ConnectionString baseUrl userName roomId) =
     let
         roomIdQuery =
-            Maybe.withDefault [] (Maybe.map (Builder.string "roomId" >> List.singleton) maybeRoomId)
+            Maybe.map (RoomId.toString >> Builder.string "roomId") roomId
+
+        query =
+            Maybe.withDefault [] (Maybe.map List.singleton roomIdQuery)
     in
-    Builder.crossOrigin baseUrl [] (roomIdQuery ++ [ Builder.string "userName" userName ])
+    Builder.crossOrigin baseUrl [] (Builder.string "userName" userName :: query)

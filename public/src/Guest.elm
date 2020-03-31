@@ -2,9 +2,10 @@ module Guest exposing (Model, Msg, init, subscriptions, update, view)
 
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
+import Poll as Poll
+import Session as Session exposing (Session)
 import Socket as Socket
-import Socket.Events exposing (startPoll, endPoll, resetPoll, castVote)
-import Vote as Vote
+import Socket.Events exposing (castVote, endPoll, resetPoll, startPoll)
 
 
 type Msg
@@ -16,9 +17,7 @@ type Msg
 
 
 type alias Model =
-    { userName : String
-    , poll : Maybe GuestPollData
-    }
+    Maybe GuestPollData
 
 
 type GuestPollData
@@ -26,29 +25,32 @@ type GuestPollData
     | Voted Bool
 
 
-init : String -> ( Model, Cmd Msg )
-init userName =
-    ( { userName = userName, poll = Nothing }, Cmd.none )
+init : ( Model, Cmd Msg )
+init =
+    ( Nothing, Cmd.none )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case ( msg, model.poll ) of
+update : Session -> Msg -> Model -> ( Model, Cmd Msg )
+update session msg model =
+    case ( msg, model ) of
         ( PollStarting, Nothing ) ->
-            ( { model | poll = Just NotVoted }, Cmd.none )
+            ( Just NotVoted, Cmd.none )
 
         ( PollEnded, Just _ ) ->
-            ( { model | poll = Nothing }, Cmd.none )
+            ( Nothing, Cmd.none )
 
         ( PollReset, Just _ ) ->
-            ( { model | poll = Just NotVoted }, Cmd.none )
+            ( Just NotVoted, Cmd.none )
 
         ( VoteClicked value, Just _ ) ->
             let
+                userName =
+                    Maybe.withDefault "" <| Session.userName session
+
                 vote =
-                    Vote.createVote model.userName value
+                    Poll.createVote userName value
             in
-            ( { model | poll = Just (Voted value) }, Socket.raiseEvent (castVote.outBound vote) )
+            ( Just (Voted value), Socket.raiseEvent (castVote.outBound vote) )
 
         _ ->
             ( model, Cmd.none )
@@ -63,11 +65,11 @@ subscriptions _ =
         ]
 
 
-view : Model -> Html Msg
-view model =
+view : Session -> Model -> Html Msg
+view session model =
     div []
-        [ div [] [ text ("Hello " ++ model.userName) ]
-        , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection model.poll)
+        [ div [] [ text ("Hello " ++ (Maybe.withDefault "" <| Session.userName session)) ]
+        , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection model)
         ]
 
 

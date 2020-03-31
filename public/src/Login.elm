@@ -4,10 +4,9 @@ import Html exposing (Html, button, div, form, input, label, text)
 import Html.Attributes exposing (disabled, for, id, type_, value)
 import Html.Events exposing (onInput, preventDefaultOn)
 import Json.Decode as Json
+import Session as Session exposing (Session)
 import Socket exposing (openConnection)
 import Socket.ConnectionString as Conn
-import Url exposing (Url)
-import Url.Parser exposing (parse, string)
 
 
 type Msg
@@ -16,42 +15,34 @@ type Msg
     | LoginSuccessful
 
 
-type alias Model =
-    { url : Url
-    , roomId : Maybe String
-    , userName : String
-    , formState : FormState
-    }
+type Model
+    = InputtingUserName String
+    | PendingConnection String
 
 
-type FormState
-    = InputtingUserName
-    | PendingConnection
+init : ( Model, Cmd Msg )
+init =
+    ( InputtingUserName "", Cmd.none )
 
 
-init : Url -> ( Model, Cmd Msg )
-init url =
-    ( { url = url, roomId = parse string url, userName = "", formState = InputtingUserName }, Cmd.none )
+update : Session -> Msg -> Model -> ( Model, Cmd Msg, Maybe String )
+update session msg model =
+    case ( msg, model ) of
+        ( UserNameEntered newUserName, InputtingUserName _ ) ->
+            ( InputtingUserName newUserName, Cmd.none, Nothing )
 
-
-update : Msg -> Model -> ( Model, Cmd Msg, Bool )
-update msg model =
-    case ( msg, model.formState ) of
-        ( UserNameEntered newUserName, InputtingUserName ) ->
-            ( { model | userName = newUserName }, Cmd.none, False )
-
-        ( FormSubmit, InputtingUserName ) ->
+        ( FormSubmit, InputtingUserName userName ) ->
             let
                 connectionString =
-                    Conn.fromUrl model.url model.userName model.roomId
+                    Conn.fromUrl (Session.url session) userName
             in
-            ( { model | formState = PendingConnection }, openConnection connectionString, False )
+            ( PendingConnection userName, openConnection connectionString, Nothing )
 
-        ( LoginSuccessful, PendingConnection ) ->
-            ( model, Cmd.none, True )
+        ( LoginSuccessful, PendingConnection userName ) ->
+            ( model, Cmd.none, Just userName )
 
         ( _, _ ) ->
-            ( model, Cmd.none, False )
+            ( model, Cmd.none, Nothing )
 
 
 subscriptions : Model -> Sub Msg
@@ -61,12 +52,12 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    case model.formState of
-        InputtingUserName ->
-            viewInput model.userName
+    case model of
+        InputtingUserName userName ->
+            viewInput userName
 
-        PendingConnection ->
-            viewPending model.userName
+        PendingConnection userName ->
+            viewPending userName
 
 
 viewInput : String -> Html Msg
