@@ -13,6 +13,7 @@ import Session as Session exposing (Session)
 import Socket
 import Socket.Events as Events
 import Url exposing (Url)
+import Http
 
 
 main : Program () Model Msg
@@ -35,6 +36,7 @@ type Model
     = CreatingRoom Session Login.Model
     | PendingRoomId Session String
     | ManagingRoom Session Admin.Model
+    | CheckingRoomExists Session RoomId
     | JoiningRoom Session RoomId Login.Model
     | ViewingRoom Session Guest.Model
     | Error Session String
@@ -50,6 +52,9 @@ session model =
             s
 
         ManagingRoom s _ ->
+            s
+
+        CheckingRoomExists s _ ->
             s
 
         JoiningRoom s _ _ ->
@@ -77,6 +82,7 @@ type Msg
     | LoginMsg Login.Msg
     | GotRoomId RoomId
     | GotError String
+    | RoomExistsResult (Result Http.Error ())
     | AdminMsg Admin.Msg
     | GuestMsg Guest.Msg
     | NoOp
@@ -107,6 +113,17 @@ update msg model =
 
                 Just userName ->
                     ( PendingRoomId s userName, Cmd.none )
+
+        ( RoomExistsResult result, CheckingRoomExists s roomId ) ->
+            case result of
+                Err (Http.BadStatus 404) ->
+                    ( Error s ("room " ++ RoomId.toString roomId ++ " does not exist"), Cmd.none )
+
+                Err _ ->
+                    ( Error s "oops something went wrong!", Cmd.none )
+
+                Ok _ ->
+                    Tuple.mapBoth (JoiningRoom s roomId) (Cmd.map LoginMsg) Login.init
 
         ( LoginMsg loginMsg, JoiningRoom s roomId login ) ->
             let
@@ -173,6 +190,9 @@ viewPage model =
 
         PendingRoomId _ _ ->
             Html.div [] [ Html.text "Connecting you to your room..." ]
+
+        CheckingRoomExists _ roomId ->
+            Html.div [] [ Html.text ("Looking for room " ++ RoomId.toString roomId) ]
 
         JoiningRoom _ _ login ->
             Html.map LoginMsg (Login.view login)
@@ -245,7 +265,12 @@ appState s url =
             Tuple.mapBoth (CreatingRoom s) (Cmd.map LoginMsg) Login.init
 
         ( Route.JoinRoom roomId, _ ) ->
-            Tuple.mapBoth (JoiningRoom s roomId) (Cmd.map LoginMsg) Login.init
+            ( CheckingRoomExists s roomId
+            , Http.get
+                { url = "/api/rooms/" ++ RoomId.toString roomId
+                , expect = Http.expectWhatever RoomExistsResult
+                }
+            )
 
         ( Route.ManageRoom _, True ) ->
             Tuple.mapBoth (ManagingRoom s) (Cmd.map AdminMsg) Admin.init

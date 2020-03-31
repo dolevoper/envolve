@@ -34,19 +34,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(urlencoded({ extended: true }));
 app.use(json());
 
+app.get('/api/rooms/:roomId', function (req, res) {
+    const { roomId } = req.params;
+
+    if (!roomIds.includes(roomId)) {
+        res.status(404)
+    }
+
+    res.end();
+});
+
 app.get('*', (_, res) => {
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
-
-// app.get('/:roomId', function (req, res) {
-//     const { roomId } = req.params;
-
-//     if (!roomIds.includes(roomId)) {
-//         return res.send(`Room ${roomId} does not exists.`);
-//     }
-
-//     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
-// });
 
 io.use((socket, next) => {
     let { roomId } = socket.handshake.query;
@@ -88,7 +88,7 @@ io.on('connection', function (socket) {
 
             io.in(roomId).clients(function (error, clientIds) {
                 if (error) throw error;
-    
+
                 clientIds.forEach(clientId => io.sockets.sockets[clientId].disconnect(true));
             });
         }
