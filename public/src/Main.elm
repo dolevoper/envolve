@@ -147,6 +147,9 @@ update msg model =
         ( GuestMsg guestMsg, ViewingRoom s guest ) ->
             Tuple.mapBoth (ViewingRoom s) (Cmd.map GuestMsg) (Guest.update s guestMsg guest)
 
+        ( GotError message, _ ) ->
+            ( Error (session model) message, Cmd.none )
+
         ( _, _ ) ->
             ( model, Cmd.none )
 
@@ -194,21 +197,34 @@ viewPage model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        disconnectedSub =
+            Socket.disconnected (always (GotError "you got disconnected from the server"))
+    in
     case model of
         CreatingRoom _ login ->
             Sub.map LoginMsg (Login.subscriptions login)
 
         PendingRoomId _ _ ->
-            Socket.listen NoOp (Events.managing.inBound GotError GotRoomId)
+            Sub.batch
+                [ Socket.listen NoOp (Events.managing.inBound GotError GotRoomId)
+                , disconnectedSub
+                ]
 
         ManagingRoom _ admin ->
-            Sub.map AdminMsg (Admin.subscriptions admin)
+            Sub.batch
+                [ Sub.map AdminMsg (Admin.subscriptions admin)
+                , disconnectedSub
+                ]
 
         JoiningRoom _ _ login ->
             Sub.map LoginMsg (Login.subscriptions login)
 
         ViewingRoom _ guest ->
-            Sub.map GuestMsg (Guest.subscriptions guest)
+            Sub.batch
+                [ Sub.map GuestMsg (Guest.subscriptions guest)
+                , disconnectedSub
+                ]
 
         _ ->
             Sub.none
