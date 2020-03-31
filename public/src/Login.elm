@@ -1,9 +1,9 @@
 module Login exposing (Model, Msg, init, subscriptions, update, view)
 
-import Html exposing (Html, button, div, form, input, label, text)
-import Html.Attributes exposing (disabled, for, id, type_, value)
-import Html.Events exposing (onInput, preventDefaultOn)
-import Json.Decode as Json
+import Element as Element exposing (Attribute, Element)
+import Element.Input as Input
+import Html.Events
+import Json.Decode as Decode
 import Session as Session exposing (Session)
 import Socket exposing (openConnection)
 import Socket.ConnectionString as Conn
@@ -13,6 +13,7 @@ type Msg
     = UserNameEntered String
     | FormSubmit
     | LoginSuccessful
+    | NoOp
 
 
 type Model
@@ -50,7 +51,7 @@ subscriptions _ =
     Socket.connected (always LoginSuccessful)
 
 
-view : Model -> Html Msg
+view : Model -> Element Msg
 view model =
     case model of
         InputtingUserName userName ->
@@ -60,24 +61,50 @@ view model =
             viewPending userName
 
 
-viewInput : String -> Html Msg
+viewInput : String -> Element Msg
 viewInput currentUserName =
-    form [ onSubmit FormSubmit ]
-        [ label [ for "name-input" ] [ text "Please enter your name: " ]
-        , input [ onInput UserNameEntered, id "name-input", value currentUserName ] []
-        , button [ type_ "submit" ] [ text "Enter" ]
+    Element.column []
+        [ Input.text [ onEnter FormSubmit ]
+            { text = currentUserName
+            , label = Input.labelAbove [] (Element.text "Please enter your name: ")
+            , onChange = UserNameEntered
+            , placeholder = Nothing
+            }
+        , Input.button []
+            { label = Element.text "Enter"
+            , onPress = Just FormSubmit
+            }
         ]
 
 
-viewPending : String -> Html Msg
+viewPending : String -> Element Msg
 viewPending currentUserName =
-    div []
-        [ label [ for "name-input" ] [ text "Please enter your name: " ]
-        , input [ id "name-input", value currentUserName, disabled True ] []
-        , button [ disabled True ] [ text "Enter" ]
+    Element.column []
+        [ Input.text []
+            { text = currentUserName
+            , label = Input.labelAbove [] (Element.text "Please enter your name: ")
+            , onChange = always NoOp
+            , placeholder = Nothing
+            }
+        , Input.button []
+            { label = Element.text "Enter"
+            , onPress = Nothing
+            }
         ]
 
 
-onSubmit : Msg -> Html.Attribute Msg
-onSubmit msg =
-    preventDefaultOn "submit" (Json.succeed ( msg, True ))
+onEnter : msg -> Attribute msg
+onEnter msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Decode.succeed msg
+
+                        else
+                            Decode.fail "Not the enter key"
+                    )
+            )
+        )

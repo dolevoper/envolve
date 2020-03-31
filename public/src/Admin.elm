@@ -1,8 +1,7 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
-import Html exposing (Html, a, button, div, li, text, ul)
-import Html.Attributes exposing (href, rel, target)
-import Html.Events exposing (onClick)
+import Element as El exposing (Element)
+import Element.Input as Input
 import Poll as Poll exposing (Poll, Vote)
 import Session exposing (Session)
 import Socket as Socket
@@ -105,7 +104,7 @@ subscriptions _ =
 -- VIEW --
 
 
-view : Session -> Model -> Html Msg
+view : Session -> Model -> Element Msg
 view session model =
     let
         userName =
@@ -114,36 +113,35 @@ view session model =
         inviteLink =
             Maybe.withDefault "" (Session.inviteLink session)
     in
-    div []
-        [ div [] [ text ("Hello " ++ userName) ]
-        , div []
-            [ text "Invite people to join using this link: "
-            , externalLink inviteLink inviteLink
+    El.column []
+        [ El.row []
+            [ El.text ("Hello " ++ userName)
+            , El.row []
+                [ El.text "Invite people to join using this link: "
+                , externalLink inviteLink inviteLink
+                ]
             ]
         , viewParticipants model.participants
         , viewAdminPollSection model.poll
         ]
 
 
-viewParticipants : List String -> Html Msg
+viewParticipants : List String -> Element Msg
 viewParticipants participants =
-    div []
-        [ text ("Participants (" ++ String.fromInt (List.length participants) ++ "):")
-        , ul [] (List.map viewParticipant participants)
-        ]
+    El.column []
+        (El.text ("Participants (" ++ String.fromInt (List.length participants) ++ "):") :: List.map El.text participants)
 
 
-viewParticipant : String -> Html Msg
-viewParticipant userName =
-    li [] [ text userName ]
-
-
-viewAdminPollSection : Maybe Poll -> Html Msg
+viewAdminPollSection : Maybe Poll -> Element Msg
 viewAdminPollSection maybePoll =
     case maybePoll of
         Nothing ->
-            div []
-                [ button [ onClick StartPoll ] [ text "Start New Poll" ] ]
+            El.el []
+                (Input.button []
+                    { onPress = Just StartPoll
+                    , label = El.text "Start New Poll"
+                    }
+                )
 
         Just poll ->
             let
@@ -153,13 +151,24 @@ viewAdminPollSection maybePoll =
                 noVotes =
                     Poll.noVotes poll
             in
-            div []
-                [ text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)
-                , button [ onClick EndPoll ] [ text "Close Poll" ]
-                , button [ onClick ResetPoll ] [ text "Reset Poll" ]
+            El.column []
+                [ El.text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)
+                , El.row []
+                    [ Input.button []
+                        { label = El.text "Close Poll"
+                        , onPress = Just EndPoll
+                        }
+                    , Input.button []
+                        { label = El.text "Reset Poll"
+                        , onPress = Just ResetPoll
+                        }
+                    ]
                 ]
 
 
-externalLink : String -> String -> Html Msg
+externalLink : String -> String -> Element Msg
 externalLink url displayText =
-    a [ href url, target "_blank", rel "noopener noreferrer" ] [ text displayText ]
+    El.newTabLink []
+        { url = url
+        , label = El.text displayText
+        }

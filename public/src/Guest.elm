@@ -1,7 +1,7 @@
 module Guest exposing (Model, Msg, init, subscriptions, update, view)
 
-import Html exposing (Html, button, div, text)
-import Html.Events exposing (onClick)
+import Element as El exposing (Element)
+import Element.Input as Input
 import Poll as Poll
 import Session as Session exposing (Session)
 import Socket as Socket
@@ -65,33 +65,37 @@ subscriptions _ =
         ]
 
 
-view : Session -> Model -> Html Msg
+view : Session -> Model -> Element Msg
 view session model =
-    div []
-        [ div [] [ text ("Hello " ++ (Maybe.withDefault "" <| Session.userName session)) ]
-        , Maybe.withDefault (text "") (Maybe.map viewGuestPollSection model)
+    El.column []
+        [ El.text ("Hello " ++ (Maybe.withDefault "" <| Session.userName session))
+        , Maybe.withDefault (El.text "") <| Maybe.map viewGuestPollSection model
         ]
 
 
-viewGuestPollSection : GuestPollData -> Html Msg
+viewGuestPollSection : GuestPollData -> Element Msg
 viewGuestPollSection pollData =
     case pollData of
         NotVoted ->
-            div []
-                [ text "Please vote: "
-                , button [ onClick (VoteClicked True) ] [ text "Yes" ]
-                , button [ onClick (VoteClicked False) ] [ text "No" ]
+            El.row []
+                [ El.text "Please vote: "
+                , Input.button []
+                    { label = El.text "Yes"
+                    , onPress = Just (VoteClicked True)
+                    }
+                , Input.button []
+                    { label = El.text "No"
+                    , onPress = Just (VoteClicked False)
+                    }
                 ]
 
         Voted vote ->
-            div []
-                [ text
-                    ("Your vote: "
-                        ++ (if vote then
-                                "Yes"
+            El.text
+                ("Your vote: "
+                    ++ (if vote then
+                            "Yes"
 
-                            else
-                                "No"
-                           )
-                    )
-                ]
+                        else
+                            "No"
+                       )
+                )

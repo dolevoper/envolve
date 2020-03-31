@@ -3,9 +3,9 @@ module Main exposing (main)
 import Admin
 import Browser as Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
+import Element as El exposing (Element)
 import Guest
-import Html as Html exposing (Html)
-import Html.Attributes as Attrs
+import Http
 import Login
 import RoomId exposing (RoomId)
 import Route
@@ -13,7 +13,6 @@ import Session as Session exposing (Session)
 import Socket
 import Socket.Events as Events
 import Url exposing (Url)
-import Http
 
 
 main : Program () Model Msg
@@ -178,36 +177,44 @@ update msg model =
 view : Model -> Document Msg
 view model =
     { title = "Envolve"
-    , body = [ viewPage model ]
+    , body =
+        [ El.layout [] <|
+            El.column []
+                [ El.text "Envolve"
+                , viewPage model
+                ]
+        ]
     }
 
 
-viewPage : Model -> Html Msg
+viewPage : Model -> Element Msg
 viewPage model =
     case model of
         CreatingRoom _ login ->
-            Html.map LoginMsg (Login.view login)
+            El.map LoginMsg (Login.view login)
 
         PendingRoomId _ _ ->
-            Html.div [] [ Html.text "Connecting you to your room..." ]
+            El.text "Connecting you to your room..."
 
         CheckingRoomExists _ roomId ->
-            Html.div [] [ Html.text ("Looking for room " ++ RoomId.toString roomId) ]
+            El.text ("Looking for room " ++ RoomId.toString roomId)
 
         JoiningRoom _ _ login ->
-            Html.map LoginMsg (Login.view login)
+            El.map LoginMsg (Login.view login)
 
         ManagingRoom s admin ->
-            Html.map AdminMsg (Admin.view s admin)
+            El.map AdminMsg (Admin.view s admin)
 
         ViewingRoom s guest ->
-            Html.map GuestMsg (Guest.view s guest)
+            El.map GuestMsg (Guest.view s guest)
 
         Error _ msg ->
-            Html.div []
-                [ Html.text msg
-                , Html.br [] []
-                , Html.a [ Attrs.href "/" ] [ Html.text "Create a new room" ]
+            El.column []
+                [ El.text msg
+                , El.link []
+                    { label = El.text "Create a new room"
+                    , url = "/"
+                    }
                 ]
 
 
