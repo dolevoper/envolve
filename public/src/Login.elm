@@ -4,10 +4,10 @@ import Element as El exposing (Attribute, Element)
 import Element.Input as Input
 import Html.Events
 import Json.Decode as Decode
+import PrimaryButton exposing (primaryButton)
 import Session as Session exposing (Session)
 import Socket exposing (openConnection)
 import Socket.ConnectionString as Conn
-import PrimaryButton exposing (primaryButton)
 
 
 type Msg
@@ -25,6 +25,10 @@ type Model
 init : ( Model, Cmd Msg )
 init =
     ( InputtingUserName "", Cmd.none )
+
+
+
+-- TODO: handle empty name
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg, Maybe String )
@@ -74,7 +78,7 @@ viewInput currentUserName =
             , onChange = UserNameEntered
             , placeholder = Nothing
             }
-        , primaryButton (Just FormSubmit) "Enter"
+        , primaryButton [ El.centerX ] (Just FormSubmit) "Enter"
         ]
 
 
@@ -87,7 +91,7 @@ viewPending currentUserName =
             , onChange = always NoOp
             , placeholder = Nothing
             }
-        , primaryButton Nothing "Enter"
+        , primaryButton [ El.centerX ] Nothing "Enter"
         ]
 
 

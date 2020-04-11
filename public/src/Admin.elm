@@ -1,8 +1,10 @@
 module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
+import Color.OneDark as Colors
 import Element as El exposing (Element)
-import Element.Input as Input
+import Element.Font as Font
 import Poll as Poll exposing (Poll, Vote)
+import PrimaryButton exposing (primaryButton)
 import Session exposing (Session)
 import Socket as Socket
 import Socket.Events exposing (castVote, endPoll, newUser, resetPoll, startPoll, userLeft)
@@ -113,35 +115,48 @@ view session model =
         inviteLink =
             Maybe.withDefault "" (Session.inviteLink session)
     in
-    El.column []
-        [ El.row []
+    El.column
+        [ El.spacing 20
+        , El.width El.fill
+        ]
+        [ El.row
+            [ El.width El.fill
+            , El.spaceEvenly
+            , El.padding 20
+            ]
             [ El.text ("Hello " ++ userName)
             , El.row []
                 [ El.text "Invite people to join using this link: "
                 , externalLink inviteLink inviteLink
                 ]
             ]
-        , viewParticipants model.participants
-        , viewAdminPollSection model.poll
+        , El.row
+            [ El.width El.fill
+            , El.padding 20
+            , El.spacing 20
+            ]
+            [ viewParticipants model.participants
+            , viewAdminPollSection model.poll
+            ]
         ]
 
 
 viewParticipants : List String -> Element Msg
 viewParticipants participants =
-    El.column []
-        (El.text ("Participants (" ++ String.fromInt (List.length participants) ++ "):") :: List.map El.text participants)
+    El.column
+        [ El.width <| El.fillPortion 1
+        , El.alignTop
+        , El.spacing 10
+        ]
+        (El.text ("Participants (" ++ String.fromInt (List.length participants) ++ "):") :: List.map (\p -> El.text <| "🙍\u{200D}♂️\t" ++ p) participants)
 
 
 viewAdminPollSection : Maybe Poll -> Element Msg
 viewAdminPollSection maybePoll =
     case maybePoll of
         Nothing ->
-            El.el []
-                (Input.button []
-                    { onPress = Just StartPoll
-                    , label = El.text "Start New Poll"
-                    }
-                )
+            El.el [ El.width <| El.fillPortion 2 ] <|
+                primaryButton [ El.centerX ] (Just StartPoll) "Start New Poll"
 
         Just poll ->
             let
@@ -151,24 +166,41 @@ viewAdminPollSection maybePoll =
                 noVotes =
                     Poll.noVotes poll
             in
-            El.column []
-                [ El.text ("Yes: " ++ String.fromInt yesVotes ++ ", No: " ++ String.fromInt noVotes)
-                , El.row []
-                    [ Input.button []
-                        { label = El.text "Close Poll"
-                        , onPress = Just EndPoll
-                        }
-                    , Input.button []
-                        { label = El.text "Reset Poll"
-                        , onPress = Just ResetPoll
-                        }
+            El.column
+                [ El.width <| El.fillPortion 2
+                , El.spacing 20
+                ]
+                [ El.row
+                    [ El.centerX
+                    , El.spacing 50
+                    , Font.size 50
+                    , Font.center
+                    ]
+                    [ El.column [ El.spacing 10 ]
+                        [ El.text "👍"
+                        , El.paragraph [] [ El.text <| String.fromInt yesVotes ]
+                        ]
+                    , El.column [ El.spacing 10 ]
+                        [ El.text "👎"
+                        , El.paragraph [] [ El.text <| String.fromInt noVotes ]
+                        ]
+                    ]
+                , El.row
+                    [ El.centerX
+                    , El.spacing 20
+                    ]
+                    [ primaryButton [] (Just EndPoll) "Close Poll"
+                    , primaryButton [] (Just ResetPoll) "Reset Poll"
                     ]
                 ]
 
 
 externalLink : String -> String -> Element Msg
 externalLink url displayText =
-    El.newTabLink []
+    El.newTabLink
+        [ Font.color Colors.blue
+        , Font.underline
+        ]
         { url = url
         , label = El.text displayText
         }

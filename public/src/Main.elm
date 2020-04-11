@@ -182,7 +182,15 @@ view : Model -> Document Msg
 view model =
     { title = "Envolve"
     , body =
-        [ El.layout
+        [ El.layoutWith
+            { options =
+                [ El.focusStyle
+                    { borderColor = Nothing
+                    , backgroundColor = Nothing
+                    , shadow = Nothing
+                    }
+                ]
+            }
             [ Font.family [ Font.typeface "Roboto" ]
             , Font.color Colors.black
             ]
