@@ -1,12 +1,13 @@
 module Login exposing (Model, Msg, init, subscriptions, update, view)
 
-import Element as Element exposing (Attribute, Element)
+import Element as El exposing (Attribute, Element)
 import Element.Input as Input
 import Html.Events
 import Json.Decode as Decode
 import Session as Session exposing (Session)
 import Socket exposing (openConnection)
 import Socket.ConnectionString as Conn
+import PrimaryButton exposing (primaryButton)
 
 
 type Msg
@@ -63,39 +64,36 @@ view model =
 
 viewInput : String -> Element Msg
 viewInput currentUserName =
-    Element.column []
+    El.column
+        [ El.centerX
+        , El.spacing 20
+        ]
         [ Input.text [ onEnter FormSubmit ]
             { text = currentUserName
-            , label = Input.labelAbove [] (Element.text "Please enter your name: ")
+            , label = Input.labelAbove [] (El.text "Please enter your name: ")
             , onChange = UserNameEntered
             , placeholder = Nothing
             }
-        , Input.button []
-            { label = Element.text "Enter"
-            , onPress = Just FormSubmit
-            }
+        , primaryButton (Just FormSubmit) "Enter"
         ]
 
 
 viewPending : String -> Element Msg
 viewPending currentUserName =
-    Element.column []
+    El.column []
         [ Input.text []
             { text = currentUserName
-            , label = Input.labelAbove [] (Element.text "Please enter your name: ")
+            , label = Input.labelAbove [] (El.text "Please enter your name: ")
             , onChange = always NoOp
             , placeholder = Nothing
             }
-        , Input.button []
-            { label = Element.text "Enter"
-            , onPress = Nothing
-            }
+        , primaryButton Nothing "Enter"
         ]
 
 
 onEnter : msg -> Attribute msg
 onEnter msg =
-    Element.htmlAttribute
+    El.htmlAttribute
         (Html.Events.on "keyup"
             (Decode.field "key" Decode.string
                 |> Decode.andThen

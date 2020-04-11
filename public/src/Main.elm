@@ -3,7 +3,11 @@ module Main exposing (main)
 import Admin
 import Browser as Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
+import Color.OneDark as Colors
 import Element as El exposing (Element)
+import Element.Background as Bg
+import Element.Border as Border
+import Element.Font as Font
 import Guest
 import Http
 import Login
@@ -178,13 +182,38 @@ view : Model -> Document Msg
 view model =
     { title = "Envolve"
     , body =
-        [ El.layout [] <|
-            El.column []
-                [ El.text "Envolve"
+        [ El.layout
+            [ Font.family [ Font.typeface "Roboto" ]
+            , Font.color Colors.black
+            ]
+          <|
+            El.column
+                [ El.height El.fill
+                , El.width El.fill
+                , El.spacing 20
+                ]
+                [ viewHeader
                 , viewPage model
                 ]
         ]
     }
+
+
+viewHeader : Element msg
+viewHeader =
+    El.row
+        [ Bg.color Colors.black
+        , Font.color Colors.white
+        , El.width El.fill
+        , El.padding 20
+        , Border.shadow
+            { blur = 10
+            , color = Colors.black
+            , offset = ( 0, 0 )
+            , size = 1
+            }
+        ]
+        [ El.text "Envolve" ]
 
 
 viewPage : Model -> Element Msg
