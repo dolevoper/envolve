@@ -1,6 +1,8 @@
 module Login exposing (Model, Msg, init, subscriptions, update, view)
 
+import Color.OneDark as Colors
 import Element as El exposing (Attribute, Element)
+import Element.Font as Font
 import Element.Input as Input
 import Html.Events
 import Json.Decode as Decode
@@ -18,31 +20,42 @@ type Msg
 
 
 type Model
-    = InputtingUserName String
+    = Pristine
+    | SomeUserName String
+    | Empty
     | PendingConnection String
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( InputtingUserName "", Cmd.none )
-
-
-
--- TODO: handle empty name
+    ( Pristine, Cmd.none )
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg, Maybe String )
 update session msg model =
     case ( msg, model ) of
-        ( UserNameEntered newUserName, InputtingUserName _ ) ->
-            ( InputtingUserName newUserName, Cmd.none, Nothing )
+        ( UserNameEntered newUserName, Pristine ) ->
+            ( SomeUserName newUserName, Cmd.none, Nothing )
 
-        ( FormSubmit, InputtingUserName userName ) ->
+        ( FormSubmit, Pristine ) ->
+            ( Empty, Cmd.none, Nothing )
+
+        ( UserNameEntered newUserName, SomeUserName _ ) ->
+            if String.isEmpty newUserName then
+                ( Empty, Cmd.none, Nothing )
+
+            else
+                ( SomeUserName newUserName, Cmd.none, Nothing )
+
+        ( FormSubmit, SomeUserName userName ) ->
             let
                 connectionString =
                     Conn.fromUrl (Session.url session) userName
             in
             ( PendingConnection userName, openConnection connectionString, Nothing )
+
+        ( UserNameEntered newUserName, Empty ) ->
+            ( SomeUserName newUserName, Cmd.none, Nothing )
 
         ( LoginSuccessful, PendingConnection userName ) ->
             ( model, Cmd.none, Just userName )
@@ -59,15 +72,21 @@ subscriptions _ =
 view : Model -> Element Msg
 view model =
     case model of
-        InputtingUserName userName ->
-            viewInput userName
+        Pristine ->
+            viewInput "" ""
+
+        SomeUserName userName ->
+            viewInput userName ""
+
+        Empty ->
+            viewInput "" "User name cannot be empty"
 
         PendingConnection userName ->
             viewPending userName
 
 
-viewInput : String -> Element Msg
-viewInput currentUserName =
+viewInput : String -> String -> Element Msg
+viewInput currentUserName message =
     El.column
         [ El.centerX
         , El.spacing 20
@@ -78,6 +97,13 @@ viewInput currentUserName =
             , onChange = UserNameEntered
             , placeholder = Nothing
             }
+        , El.paragraph
+            [ Font.color Colors.darkRed
+            , Font.size 16
+            , Font.center
+            , El.height <| El.px 16
+            ]
+            [ El.text message ]
         , primaryButton [ El.centerX ] (Just FormSubmit) "Enter"
         ]
 
