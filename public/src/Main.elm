@@ -246,9 +246,16 @@ viewPage model =
             El.map GuestMsg (Guest.view s guest)
 
         Error _ msg ->
-            El.column []
+            El.textColumn
+                [ El.centerX
+                , El.spacing 20
+                , Font.center
+                ]
                 [ El.text msg
-                , El.link []
+                , El.link
+                    [ Font.color Colors.blue
+                    , Font.underline
+                    ]
                     { label = El.text "Create a new room"
                     , url = "/"
                     }
