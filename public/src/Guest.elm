@@ -1,8 +1,9 @@
 module Guest exposing (Model, Msg, init, subscriptions, update, view)
 
 import Element as El exposing (Element)
-import Element.Input as Input
+import Element.Font as Font
 import Poll as Poll
+import PrimaryButton exposing (primaryButton)
 import Session as Session exposing (Session)
 import Socket as Socket
 import Socket.Events exposing (castVote, endPoll, resetPoll, startPoll)
@@ -67,7 +68,11 @@ subscriptions _ =
 
 view : Session -> Model -> Element Msg
 view session model =
-    El.column []
+    El.column
+        [ El.width El.fill
+        , El.padding 20
+        , El.spacing 20
+        ]
         [ El.text ("Hello " ++ (Maybe.withDefault "" <| Session.userName session))
         , Maybe.withDefault (El.text "") <| Maybe.map viewGuestPollSection model
         ]
@@ -77,25 +82,35 @@ viewGuestPollSection : GuestPollData -> Element Msg
 viewGuestPollSection pollData =
     case pollData of
         NotVoted ->
-            El.row []
-                [ El.text "Please vote: "
-                , Input.button []
-                    { label = El.text "Yes"
-                    , onPress = Just (VoteClicked True)
-                    }
-                , Input.button []
-                    { label = El.text "No"
-                    , onPress = Just (VoteClicked False)
-                    }
+            El.column
+                [ El.centerX
+                , El.spacing 20
+                , Font.center
+                ]
+                [ El.paragraph [] [ El.text "Please vote:" ]
+                , El.row
+                    [ El.spacing 20
+                    , Font.size 70
+                    ]
+                    [ primaryButton [ El.padding 20 ] (Just <| VoteClicked True) "👍"
+                    , primaryButton [ El.padding 20 ] (Just <| VoteClicked False) "👎"
+                    ]
                 ]
 
         Voted vote ->
-            El.text
-                ("Your vote: "
-                    ++ (if vote then
-                            "Yes"
+            let
+                voteSign =
+                    if vote then
+                        "👍"
 
-                        else
-                            "No"
-                       )
-                )
+                    else
+                        "👎"
+            in
+            El.column
+                [ El.centerX
+                , El.spacing 20
+                , Font.center
+                ]
+                [ El.paragraph [] [ El.text "Your vote:" ]
+                , El.paragraph [ Font.size 70 ] [ El.text voteSign ]
+                ]
