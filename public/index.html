@@ -11,6 +11,23 @@
 	<script>
 		const app = Elm.Main.init();
 
+		app.ports.startScreenShare.subscribe(function () {
+			setTimeout(async () => {
+				try {
+					const video = document.getElementById('screen-share-video');
+					const stream = await navigator.mediaDevices.getDisplayMedia();
+
+					stream.oninactive = function () {
+						app.ports.screenShareStopped.send(null);
+					};
+
+					video.srcObject = stream;
+				} catch {
+					app.ports.screenShareStopped.send(null);
+				}
+			});
+		});
+
 		app.ports.connect.subscribe(function (connectionString) {
 			const socket = io(connectionString);
 

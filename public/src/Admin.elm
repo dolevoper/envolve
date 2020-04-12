@@ -1,13 +1,21 @@
-module Admin exposing (Model, Msg, init, subscriptions, update, view)
+port module Admin exposing (Model, Msg, init, subscriptions, update, view)
 
 import Color.OneDark as Colors
 import Element as El exposing (Element)
 import Element.Font as Font
+import Html as Html
+import Html.Attributes as Attrs
 import Poll as Poll exposing (Poll, Vote)
 import PrimaryButton exposing (primaryButton)
 import Session exposing (Session)
 import Socket as Socket
 import Socket.Events exposing (castVote, endPoll, newUser, resetPoll, startPoll, userLeft)
+
+
+port startScreenShare : () -> Cmd msg
+
+
+port screenShareStopped : (() -> msg) -> Sub msg
 
 
 
@@ -17,6 +25,7 @@ import Socket.Events exposing (castVote, endPoll, newUser, resetPoll, startPoll,
 type alias Model =
     { participants : List String
     , poll : Maybe Poll
+    , isScreenSharing : Bool
     }
 
 
@@ -42,7 +51,7 @@ removeVote userName m =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { participants = [], poll = Nothing }, Cmd.none )
+    ( { participants = [], poll = Nothing, isScreenSharing = False }, Cmd.none )
 
 
 
@@ -56,34 +65,42 @@ type Msg
     | EndPoll
     | ResetPoll
     | RecievedVote Vote
+    | StartScreenShare
+    | StopScreenShare
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model.poll ) of
-        ( UserJoined userName, Nothing ) ->
+    case ( msg, model.poll, model.isScreenSharing ) of
+        ( UserJoined userName, Nothing, _ ) ->
             ( addParticipant userName model, Cmd.none )
 
-        ( UserJoined userName, Just _ ) ->
+        ( UserJoined userName, Just _, _ ) ->
             ( addParticipant userName model, Socket.raiseEvent startPoll.outBound )
 
-        ( UserLeft userName, _ ) ->
+        ( UserLeft userName, _, _ ) ->
             ( model |> removeParticipant userName |> removeVote userName
             , Cmd.none
             )
 
-        ( StartPoll, Nothing ) ->
+        ( StartPoll, Nothing, _ ) ->
             ( { model | poll = Just Poll.emptyPoll }, Socket.raiseEvent startPoll.outBound )
 
-        ( EndPoll, Just _ ) ->
+        ( EndPoll, Just _, _ ) ->
             ( { model | poll = Nothing }, Socket.raiseEvent endPoll.outBound )
 
-        ( ResetPoll, Just _ ) ->
+        ( ResetPoll, Just _, _ ) ->
             ( { model | poll = Just Poll.emptyPoll }, Socket.raiseEvent resetPoll.outBound )
 
-        ( RecievedVote vote, Just _ ) ->
+        ( RecievedVote vote, Just _, _ ) ->
             ( addVote vote model, Cmd.none )
+
+        ( StartScreenShare, _, False ) ->
+            ( { model | isScreenSharing = True }, startScreenShare () )
+
+        ( StopScreenShare, _, True ) ->
+            ( { model | isScreenSharing = False }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -99,6 +116,7 @@ subscriptions _ =
         [ Socket.listen NoOp (newUser.inBound (always NoOp) UserJoined)
         , Socket.listen NoOp (userLeft.inBound (always NoOp) UserLeft)
         , Socket.listen NoOp (castVote.inBound (always NoOp) RecievedVote)
+        , screenShareStopped <| always StopScreenShare
         ]
 
 
@@ -138,6 +156,7 @@ view session model =
             [ viewParticipants model.participants
             , viewAdminPollSection model.poll
             ]
+        , viewScreenShareSection model.isScreenSharing
         ]
 
 
@@ -193,6 +212,29 @@ viewAdminPollSection maybePoll =
                     , primaryButton [] (Just ResetPoll) "Reset Poll"
                     ]
                 ]
+
+
+viewScreenShareSection : Bool -> Element Msg
+viewScreenShareSection isScreenSharing =
+    if not isScreenSharing then
+        primaryButton [ El.centerX ] (Just StartScreenShare) "Start Screen Share"
+
+    else
+        El.el
+            [ El.centerX
+            , El.width <| El.px 1024
+            ]
+        <|
+            El.html <|
+                Html.video
+                    [ Attrs.id "screen-share-video"
+                    , Attrs.autoplay True
+                    , Attrs.attribute "playsinline" ""
+                    , Attrs.attribute "muted" ""
+                    , Attrs.style "width" "100%"
+                    , Attrs.style "object-fit" "cover"
+                    ]
+                    []
 
 
 externalLink : String -> String -> Element Msg
