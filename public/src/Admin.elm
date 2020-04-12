@@ -132,6 +132,9 @@ view session model =
 
         inviteLink =
             Maybe.withDefault "" (Session.inviteLink session)
+
+        presentationLink =
+            Maybe.withDefault "" <| Session.presentationLink session
     in
     El.column
         [ El.spacing 20
@@ -139,14 +142,15 @@ view session model =
         ]
         [ El.row
             [ El.width El.fill
-            , El.spaceEvenly
+            , El.spacing 20
             , El.padding 20
             ]
             [ El.text ("Hello " ++ userName)
-            , El.row []
+            , El.row [ El.alignRight ]
                 [ El.text "Invite people to join using this link: "
                 , externalLink inviteLink inviteLink
                 ]
+            , El.newTabLink [ El.alignRight ] { url = presentationLink, label = El.text "🎦" }
             ]
         , El.row
             [ El.width El.fill
@@ -237,7 +241,7 @@ viewScreenShareSection isScreenSharing =
                     []
 
 
-externalLink : String -> String -> Element Msg
+externalLink : String -> String -> Element msg
 externalLink url displayText =
     El.newTabLink
         [ Font.color Colors.blue

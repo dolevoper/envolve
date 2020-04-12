@@ -11,6 +11,7 @@ import Element.Font as Font
 import Guest
 import Http
 import Login
+import Present
 import RoomId exposing (RoomId)
 import Route
 import Session as Session exposing (Session)
@@ -42,6 +43,7 @@ type Model
     | CheckingRoomExists Session RoomId
     | JoiningRoom Session RoomId Login.Model
     | ViewingRoom Session Guest.Model
+    | PresentingRoom Session Present.Model
     | Error Session String
 
 
@@ -66,6 +68,9 @@ session model =
         ViewingRoom s _ ->
             s
 
+        PresentingRoom s _ ->
+            s
+
         Error s _ ->
             s
 
@@ -88,6 +93,7 @@ type Msg
     | RoomExistsResult (Result Http.Error ())
     | AdminMsg Admin.Msg
     | GuestMsg Guest.Msg
+    | PresentationMsg Present.Msg
     | NoOp
 
 
@@ -167,6 +173,9 @@ update msg model =
         ( GuestMsg guestMsg, ViewingRoom s guest ) ->
             Tuple.mapBoth (ViewingRoom s) (Cmd.map GuestMsg) (Guest.update s guestMsg guest)
 
+        ( PresentationMsg presentationMsg, PresentingRoom s presentation ) ->
+            Tuple.mapBoth (PresentingRoom s) (Cmd.map PresentationMsg) (Present.update s presentationMsg presentation)
+
         ( GotError message, _ ) ->
             ( Error (session model) message, Cmd.none )
 
@@ -245,6 +254,9 @@ viewPage model =
         ViewingRoom s guest ->
             El.map GuestMsg (Guest.view s guest)
 
+        PresentingRoom _ presentation ->
+            Present.view presentation
+
         Error _ msg ->
             El.textColumn
                 [ El.centerX
@@ -297,6 +309,9 @@ subscriptions model =
                 , disconnectedSub
                 ]
 
+        PresentingRoom _ presentation ->
+            Sub.map PresentationMsg (Present.subscriptions presentation)
+
         _ ->
             Sub.none
 
@@ -328,6 +343,9 @@ appState s url =
 
         ( Route.ViewRoom _, True ) ->
             Tuple.mapBoth (ViewingRoom s) (Cmd.map GuestMsg) Guest.init
+
+        ( Route.PresentRoom _, _ ) ->
+            Tuple.mapFirst (PresentingRoom s) <| Present.init s
 
         ( _, False ) ->
             ( Error s "you're not logged in!", Cmd.none )

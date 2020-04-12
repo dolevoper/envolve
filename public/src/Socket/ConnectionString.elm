@@ -16,10 +16,10 @@ type alias UserName =
 
 
 type ConnectionString
-    = ConnectionString BaseUrl UserName (Maybe RoomId)
+    = ConnectionString BaseUrl (Maybe UserName) (Maybe RoomId)
 
 
-fromUrl : Url -> UserName -> ConnectionString
+fromUrl : Url -> Maybe UserName -> ConnectionString
 fromUrl url userName =
     ConnectionString (baseUrl url) userName (url |> Route.fromUrl |> Route.roomId)
 
@@ -30,7 +30,13 @@ toString (ConnectionString baseUrl userName roomId) =
         roomIdQuery =
             Maybe.map (RoomId.toString >> Builder.string "roomId") roomId
 
+        userNameQuery =
+            Maybe.map (Builder.string "userName") userName
+
         query =
-            Maybe.withDefault [] (Maybe.map List.singleton roomIdQuery)
+            Maybe.map2
+                (\q1 -> \q2 -> [q1, q2])
+                roomIdQuery
+                userNameQuery
     in
-    Builder.crossOrigin baseUrl [] (Builder.string "userName" userName :: query)
+    Builder.crossOrigin baseUrl [] (Maybe.withDefault [] query)

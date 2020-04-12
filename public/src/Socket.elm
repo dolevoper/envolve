@@ -2,6 +2,7 @@ port module Socket exposing
     ( EmptyEvent
     , EventWithPayload
     , connected
+    , disconnect
     , disconnected
     , emptyEvent
     , eventWithPayload
@@ -57,6 +58,9 @@ eventWithPayload name encoder decoder =
 
 
 port connect : String -> Cmd msg
+
+
+port disconnect : () -> Cmd msg
 
 
 port connected : (() -> msg) -> Sub msg

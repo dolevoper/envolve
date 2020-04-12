@@ -1,4 +1,4 @@
-module Session exposing (Session, inviteLink, isLoggedIn, login, newSession, pushUrl, updateUrl, url, userName)
+module Session exposing (Session, inviteLink, isLoggedIn, login, newSession, presentationLink, pushUrl, updateUrl, url, userName)
 
 import Browser.Navigation as Nav
 import RoomId exposing (RoomId)
@@ -59,6 +59,16 @@ inviteLink session =
     case session of
         LoggedIn s ->
             Just (baseUrl s.url ++ Route.toString (Route.JoinRoom s.roomId))
+
+        NotLoggedIn _ ->
+            Nothing
+
+
+presentationLink : Session -> Maybe String
+presentationLink session =
+    case session of
+        LoggedIn s ->
+            Just (baseUrl s.url ++ Route.toString (Route.PresentRoom s.roomId))
 
         NotLoggedIn _ ->
             Nothing

@@ -10,6 +10,7 @@ type Route
     | JoinRoom RoomId
     | ManageRoom RoomId
     | ViewRoom RoomId
+    | PresentRoom RoomId
     | NotFound
 
 
@@ -20,6 +21,7 @@ parser =
         , Parser.map JoinRoom (RoomId.urlParser </> Parser.s "join")
         , Parser.map ManageRoom (RoomId.urlParser </> Parser.s "manage")
         , Parser.map ViewRoom (RoomId.urlParser </> Parser.s "view")
+        , Parser.map PresentRoom (RoomId.urlParser </> Parser.s "present")
         ]
 
 
@@ -47,6 +49,9 @@ toString route =
         ViewRoom id ->
             toPath [ RoomId.toString id, "view" ]
 
+        PresentRoom id ->
+            toPath [ RoomId.toString id, "present" ]
+
         NotFound ->
             "/"
 
@@ -64,6 +69,9 @@ roomId route =
             Just id
 
         ViewRoom id ->
+            Just id
+
+        PresentRoom id ->
             Just id
 
         NotFound ->

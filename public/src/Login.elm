@@ -50,7 +50,7 @@ update session msg model =
         ( FormSubmit, SomeUserName userName ) ->
             let
                 connectionString =
-                    Conn.fromUrl (Session.url session) userName
+                    Conn.fromUrl (Session.url session) (Just userName)
             in
             ( PendingConnection userName, openConnection connectionString, Nothing )
 
