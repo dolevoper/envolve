@@ -32,7 +32,6 @@
 			const socket = io(connectionString);
 
 			socket.on('disconnect', () => {
-				console.log('disconnected');
 				app.ports.disconnected.send(null)
 			});
 

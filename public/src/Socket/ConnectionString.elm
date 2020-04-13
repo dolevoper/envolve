@@ -28,15 +28,12 @@ toString : ConnectionString -> String
 toString (ConnectionString baseUrl userName roomId) =
     let
         roomIdQuery =
-            Maybe.map (RoomId.toString >> Builder.string "roomId") roomId
+            Maybe.map (RoomId.toString >> Builder.string "roomId" >> List.singleton) roomId
 
         userNameQuery =
-            Maybe.map (Builder.string "userName") userName
+            Maybe.map (Builder.string "userName" >> List.singleton) userName
 
         query =
-            Maybe.map2
-                (\q1 -> \q2 -> [q1, q2])
-                roomIdQuery
-                userNameQuery
+            Maybe.withDefault [] roomIdQuery ++ Maybe.withDefault [] userNameQuery
     in
-    Builder.crossOrigin baseUrl [] (Maybe.withDefault [] query)
+    Builder.crossOrigin baseUrl [] query
